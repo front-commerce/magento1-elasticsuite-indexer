@@ -173,12 +173,12 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index Self reference
      */
-    public function optimize()
+    public function forceMerge()
     {
         $indices = $this->getClient()->indices();
         $params  = array('index' => $this->getCurrentName());
         if ($indices->exists($params)) {
-            $indices->optimize($params);
+            $indices->forceMerge($params);
         }
         return $this;
     }
@@ -466,7 +466,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
         }
 
         if ($this->_indexNeedInstall) {
-            $this->optimize();
+            $this->forceMerge();
             Mage::dispatchEvent('smile_elasticsearch_index_install_before', array('index_name' => $this->getCurrentName()));
 
             $indices = $this->getClient()->indices();
