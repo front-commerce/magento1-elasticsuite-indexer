@@ -149,49 +149,7 @@
             </modules>
         </translate>
     </adminhtml>
-    <frontend>
-        <layout>
-            <updates>
-                <smile_virtualcategories>
-                    <file>smile/virtualcategories.xml</file>
-                </smile_virtualcategories>
-            </updates>
-        </layout>
-        <events>
-            <category_filter_add_filter_to_collection_before>
-                <observers>
-                    <smile_virtualcategories>
-                        <class>smile_virtualcategories/observer</class>
-                        <method>prepareCategoryFilter</method>
-                    </smile_virtualcategories>
-                </observers>
-            </category_filter_add_filter_to_collection_before>
-            <category_filter_add_facet_to_collection_before>
-                <observers>
-                    <smile_virtualcategories>
-                        <class>smile_virtualcategories/observer</class>
-                        <method>prepareCategoryFacet</method>
-                    </smile_virtualcategories>
-                </observers>
-            </category_filter_add_facet_to_collection_before>
-            <category_filter_get_children_categories>
-                <observers>
-                    <smile_virtualcategories>
-                        <class>smile_virtualcategories/observer</class>
-                        <method>appendRootCategoryChildrens</method>
-                    </smile_virtualcategories>
-                </observers>
-            </category_filter_get_children_categories>
-            <category_filter_prepare_reset_value>
-                <observers>
-                    <smile_virtualcategories>
-                        <class>smile_virtualcategories/observer</class>
-                        <method>prepareResetValue</method>
-                    </smile_virtualcategories>
-                </observers>
-            </category_filter_prepare_reset_value>
-        </events>
-    </frontend>
+
     <default>
         <index_management>
             <index_options>
