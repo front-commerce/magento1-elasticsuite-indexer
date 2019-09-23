@@ -1,13 +1,13 @@
 <?php
 
-namespace Elasticsearch\Tests;
-use Elasticsearch;
+declare(strict_types = 1);
 
-use Monolog\Logger;
-use org\bovigo\vfs\vfsStream;
-use org\bovigo\vfs\vfsStreamDirectory;
-use Psr\Log\LogLevel;
-use Symfony\Component\Config\Definition\Exception\Exception;
+namespace Elasticsearch\Tests;
+
+use Elasticsearch;
+use Elasticsearch\Client;
+use Elasticsearch\ClientBuilder;
+use Elasticsearch\Common\Exceptions\MaxRetriesException;
 use Mockery as m;
 
 /**
@@ -20,331 +20,450 @@ use Mockery as m;
  * @license    http://www.apache.org/licenses/LICENSE-2.0 Apache2
  * @link       http://elasticsearch.org
  */
-class ClientTest extends \PHPUnit_Framework_TestCase
+class ClientTest extends \PHPUnit\Framework\TestCase
 {
     public function tearDown()
     {
         m::close();
     }
 
-    public function setUp()
-    {
-        $this->root = vfsStream::setup('root');
-    }
-
-    /**
-     * @expectedException \Elasticsearch\Common\Exceptions\InvalidArgumentException
-     */
-    public function testConstructorStringHost()
-    {
-        // Hosts param must be an array.
-        $params = array('hosts' => 'localhost');
-        $client = new Elasticsearch\Client($params);
-
-    }
-
-
-    public function testOneGoodOneBadHostNoException()
-    {
-        $params = array('hosts' => array (
-            '127.0.0.1:80',
-            $_SERVER['ES_TEST_HOST'],
-        ));
-        $client = new Elasticsearch\Client($params);
-
-        // Perform three requests to make sure the bad host is tried at least once
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-
-    }
-
-
-    /**
-     * @expectedException Elasticsearch\Common\Exceptions\Curl\CouldNotConnectToHost
-     */
-    public function testOneGoodOneBadHostNoRetryException()
-    {
-        $params = array('hosts' => array (
-            '127.0.0.1:1',
-            $_SERVER['ES_TEST_HOST'],
-        ));
-        $params['retries'] = 0;
-        $client = new Elasticsearch\Client($params);
-
-        // Perform three requests to make sure the bad host is tried at least once
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-
-    }
-
-
-    /**
-     * @expectedException \Elasticsearch\Common\Exceptions\Curl\CouldNotConnectToHost
-     */
-    public function testBadHost()
-    {
-        $params = array('hosts' => array (
-            '127.0.0.1:8200',
-        ));
-        $client = new Elasticsearch\Client($params);
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-
-    }
-
-
-    /**
-     * @expectedException \Elasticsearch\Common\Exceptions\InvalidArgumentException
-     */
     public function testConstructorIllegalPort()
     {
-        $params = array(
-            'hosts' => array('localhost:abc')
+        $this->expectException(\Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Could not parse URI');
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(['localhost:abc'])->build();
+    }
+
+    public function testFromConfig()
+    {
+        $params = [
+            'hosts' => [
+                'localhost:9200'
+            ],
+            'retries' => 2,
+            'handler' => ClientBuilder::multiHandler()
+        ];
+        $client = ClientBuilder::fromConfig($params);
+
+        $this->assertInstanceOf(Client::class, $client);
+    }
+
+    public function testFromConfigBadParam()
+    {
+        $params = [
+            'hosts' => [
+                'localhost:9200'
+            ],
+            'retries' => 2,
+            'imNotReal' => 5
+        ];
+
+        $this->expectException(\Elasticsearch\Common\Exceptions\RuntimeException::class);
+        $this->expectExceptionMessage('Unknown parameters provided: imNotReal');
+
+        $client = ClientBuilder::fromConfig($params);
+    }
+
+    public function testFromConfigBadParamQuiet()
+    {
+        $params = [
+            'hosts' => [
+                'localhost:9200'
+            ],
+            'retries' => 2,
+            'imNotReal' => 5
+        ];
+        $client = ClientBuilder::fromConfig($params, true);
+
+        $this->assertInstanceOf(Client::class, $client);
+    }
+
+    public function testIndexCannotBeNullForDelete()
+    {
+        $client = ClientBuilder::create()->build();
+
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('index cannot be null.');
+
+        $client->delete(
+            [
+            'index' => null,
+            'type' => 'test',
+            'id' => 'test'
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-
     }
 
-    /**
-     * @expectedException \Elasticsearch\Common\Exceptions\Curl\CouldNotConnectToHost
-     */
-    public function testZeroRetries()
+    public function testTypeCannotBeNullForDelete()
     {
-        $params = array(
-            'retries' => 0,
-            'hosts' => array('localhost:8000')
+        $client = ClientBuilder::create()->build();
+
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('type cannot be null.');
+
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => null,
+            'id' => 'test'
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-        $client->exists(array("index" => 'test', 'type' => 'test', 'id' => 'test'));
-
     }
 
-
-    public function testConstructorEmptyPort()
+    public function testIdCannotBeNullForDelete()
     {
-        $mockPimple = m::mock('Pimple')->shouldReceive('offsetGet')->getMock()->shouldReceive('offsetSet')->getMock();
-        $mockDIC = m::mock('DICBuilder')->shouldReceive('getDIC')->once()->andReturn($mockPimple)->getMock();
+        $client = ClientBuilder::create()->build();
 
-        $that = $this;  //hurp durp
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('id cannot be null.');
 
-        $params = array(
-            'hosts' => array('localhost:'),
-            'dic' => function ($hosts, $params) use ($mockDIC, $that) {
-
-                $expected = array(array('scheme' => 'http', 'host' => 'localhost', 'port' => 9200));
-                $that->assertEquals($expected, $hosts);
-                return $mockDIC;
-            }
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => 'test',
+            'id' => null
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-
     }
 
-    public function testConstructorNoPort()
+    public function testIndexCannotBeEmptyStringForDelete()
     {
-        $mockPimple = m::mock('Pimple')->shouldReceive('offsetGet')->getMock()->shouldReceive('offsetSet')->getMock();
-        $mockDIC = m::mock('DICBuilder')->shouldReceive('getDIC')->once()->andReturn($mockPimple)->getMock();
+        $client = ClientBuilder::create()->build();
 
-        $that = $this;  //hurp durp
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('index cannot be an empty string');
 
-        $params = array(
-            'hosts' => array('localhost'),
-            'dic' => function ($hosts, $params) use ($mockDIC, $that) {
-
-                $expected = array(array('scheme' => 'http', 'host' => 'localhost', 'port' => 9200));
-                $that->assertEquals($expected, $hosts);
-                return $mockDIC;
-            }
+        $client->delete(
+            [
+            'index' => '',
+            'type' => 'test',
+            'id' => 'test'
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-
     }
 
-    public function testConstructorWithPort()
+    public function testTypeCannotBeEmptyStringForDelete()
     {
-        $mockPimple = m::mock('Pimple')->shouldReceive('offsetGet')->getMock()->shouldReceive('offsetSet')->getMock();
-        $mockDIC = m::mock('DICBuilder')->shouldReceive('getDIC')->once()->andReturn($mockPimple)->getMock();
+        $client = ClientBuilder::create()->build();
 
-        $that = $this;  //hurp durp
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('type cannot be an empty string');
 
-        $params = array(
-            'hosts' => array('localhost:9200'),
-            'dic' => function ($hosts, $params) use ($mockDIC, $that) {
-
-                $expected = array(array('scheme' => 'http', 'host' => 'localhost', 'port' => 9200));
-                $that->assertEquals($expected, $hosts);
-                return $mockDIC;
-            }
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => '',
+            'id' => 'test'
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-
     }
 
-    public function testConstructorWithSchemeAndPort()
+    public function testIdCannotBeEmptyStringForDelete()
     {
-        $mockPimple = m::mock('Pimple')->shouldReceive('offsetGet')->getMock()->shouldReceive('offsetSet')->getMock();
-        $mockDIC = m::mock('DICBuilder')->shouldReceive('getDIC')->once()->andReturn($mockPimple)->getMock();
+        $client = ClientBuilder::create()->build();
 
-        $that = $this;  //hurp durp
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('id cannot be an empty string');
 
-        $params = array(
-            'hosts' => array('http://localhost:9200'),
-            'dic' => function ($hosts, $params) use ($mockDIC, $that) {
-
-                $expected = array(array('scheme' => 'http', 'host' => 'localhost', 'port' => 9200));
-                $that->assertEquals($expected, $hosts);
-                return $mockDIC;
-            }
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => 'test',
+            'id' => ''
+            ]
         );
-        $client = new Elasticsearch\Client($params);
-
     }
 
-
-
-
-    /**
-     *
-     * @expectedException \Elasticsearch\Common\Exceptions\InvalidArgumentException
-     *
-     * @return void
-     */
-    public function testConstructorStringParam()
+    public function testIndexCannotBeArrayOfEmptyStringsForDelete()
     {
-        // String parameter instead of an array.
-        $params = 'some arbitrary string';
-        $client = new Elasticsearch\Client($params);
+        $client = ClientBuilder::create()->build();
 
-    }//end testConstructorStringParam()
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('index cannot be an array of empty strings');
 
-
-    /**
-     *
-     * @expectedException \Elasticsearch\Common\Exceptions\UnexpectedValueException
-     *
-     * @return void
-     */
-    public function testConstructorInvalidParam()
-    {
-        // String parameter instead of an array.
-        $params = array('randomParam' => 'some arbitrary string');
-        $client = new Elasticsearch\Client($params);
+        $client->delete(
+            [
+            'index' => ['', '', ''],
+            'type' => 'test',
+            'id' => 'test'
+            ]
+        );
     }
 
-
-    /**
-     * This test is rather hacky...better way to test than check headers in log?
-     *
-     * @group integration
-     */
-    public function testBasicAuth()
+    public function testTypeCannotBeArrayOfEmptyStringsForDelete()
     {
-        $path = vfsStream::url('root');
+        $client = ClientBuilder::create()->build();
 
-        $params = array();
-        $params['logging'] = true;
-        $params['connectionParams']['auth'] = array('username', 'password', 'Basic');
-        $params['logPath'] = "$path/elasticsearch.log";
-        $params['logLevel'] = LogLevel::INFO;
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('type cannot be an array of empty strings');
 
-        $params['hosts'] = array ($_SERVER['ES_TEST_HOST']);
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => ['', '', ''],
+            'id' => 'test'
+            ]
+        );
+    }
 
-        $client = new Elasticsearch\Client($params);
+    public function testIndexCannotBeArrayOfNullsForDelete()
+    {
+        $client = ClientBuilder::create()->build();
+
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('index cannot be an array of empty strings');
+
+        $client->delete(
+            [
+            'index' => [null, null, null],
+            'type' => 'test',
+            'id' => 'test'
+            ]
+        );
+    }
+
+    public function testTypeCannotBeArrayOfNullsForDelete()
+    {
+        $client = ClientBuilder::create()->build();
+
+        $this->expectException(Elasticsearch\Common\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage('type cannot be an array of empty strings');
+
+        $client->delete(
+            [
+            'index' => 'test',
+            'type' => [null, null, null],
+            'id' => 'test'
+            ]
+        );
+    }
+
+    public function testMaxRetriesException()
+    {
+        $client = Elasticsearch\ClientBuilder::create()
+            ->setHosts(["localhost:1"])
+            ->setRetries(0)
+            ->build();
+
+        $searchParams = [
+            'index' => 'test',
+            'type' => 'test',
+            'body' => [
+                'query' => [
+                    'match_all' => []
+                ]
+            ]
+        ];
+
+        $client = Elasticsearch\ClientBuilder::create()
+            ->setHosts(["localhost:1"])
+            ->setRetries(0)
+            ->build();
 
         try {
-            $client->ping();
-        } catch (Exception $e) {
-            // Ok to fail, not actually trying to connect.  Just want to see
-            // log for basic auth headers
-        }
-
-        $log = file_get_contents('vfs://root/elasticsearch.log');
-        $basicAuthSignature = 'Basic dXNlcm5hbWU6cGFzc3dvcmQ=';
-        $this->assertContains($basicAuthSignature, $log);
-    }
-
-
-    /**
-     * @group integration
-     */
-    public function testNoBasicAuth()
-    {
-        $path = vfsStream::url('root');
-
-        $params = array();
-        $params['logging'] = true;
-        $params['logPath'] = "$path/elasticsearch.log";
-        $params['logLevel'] = LogLevel::INFO;
-
-        $params['hosts'] = array ($_SERVER['ES_TEST_HOST']);
-
-        $client = new Elasticsearch\Client($params);
-
-        try {
-            $client->ping();
-        } catch (Exception $e) {
-            // Ok to fail, not actually trying to connect.  Just want to see
-            // log
-        }
-
-        $log = file_get_contents('vfs://root/elasticsearch.log');
-        $basicAuthSignature = '"authorization"';
-        $this->assertNotContains($basicAuthSignature, $log);
-    }
-
-    /**
-     * @group integration
-     */
-    public function testDisableLogging()
-    {
-        $path = vfsStream::url('root');
-
-        $params = array();
-        $params['logging'] = false;
-        $params['hosts'] = array ($_SERVER['ES_TEST_HOST']);
-        $client = new Elasticsearch\Client($params);
-
-        try {
-            $client->ping();
-        } catch (Exception $e) {
-            // Ok to fail, not actually trying to connect.  Just want to see
-            // log
-        }
-
-        $logExists = file_exists('vfs://root/elasticsearch.log');
-        $this->assertFalse($logExists);
-    }
-
-    public function testHighTimeout()
-    {
-        $params = array();
-        $params['connectionParams']['timeout'] = 5000;
-        $params['hosts'] = array ($_SERVER['ES_TEST_HOST']);
-        $client = new Elasticsearch\Client($params);
-
-        try {
-            $client->ping();
-        } catch (Exception $e) {
-
-        }
-
-    }
-
-    public function testHTTPS()
-    {
-        // Hosts param must be an array.
-        $params = array('hosts' => array('https://localhost'));
-        $client = new Elasticsearch\Client($params);
-
-        try {
-            $client->exists(array('index' => 't', 'type' => 't', 'id' => 1));
+            $client->search($searchParams);
+            $this->fail("Should have thrown CouldNotConnectToHost");
+        } catch (Elasticsearch\Common\Exceptions\Curl\CouldNotConnectToHost $e) {
+            // All good
+            $previous = $e->getPrevious();
+            $this->assertInstanceOf(MaxRetriesException::class, $previous);
         } catch (\Exception $e) {
-
+            throw $e;
         }
 
-        $last = $client->transport->getLastConnection()->getLastRequestInfo();
-        $this->assertEquals('https://localhost:9200/t/t/1?', $last['request']['uri']);
 
+        $client = Elasticsearch\ClientBuilder::create()
+            ->setHosts(["localhost:1"])
+            ->setRetries(0)
+            ->build();
+
+        try {
+            $client->search($searchParams);
+            $this->fail("Should have thrown TransportException");
+        } catch (Elasticsearch\Common\Exceptions\TransportException $e) {
+            // All good
+            $previous = $e->getPrevious();
+            $this->assertInstanceOf(MaxRetriesException::class, $previous);
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function testInlineHosts()
+    {
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            'localhost:9200'
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("localhost:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            'http://localhost:9200'
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("localhost:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            'http://foo.com:9200'
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            'https://foo.com:9200'
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("https", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            'https://user:pass@foo.com:9200'
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("https", $host->getTransportSchema());
+        $this->assertSame("user:pass", $host->getUserPass());
+    }
+
+    public function testExtendedHosts()
+    {
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'localhost',
+                'port' => 9200,
+                'scheme' => 'http'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("localhost:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com',
+                'port' => 9200,
+                'scheme' => 'http'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com',
+                'port' => 9200,
+                'scheme' => 'https'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("https", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com',
+                'scheme' => 'http'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com',
+                'port' => 9500,
+                'scheme' => 'https'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9500", $host->getHost());
+        $this->assertSame("https", $host->getTransportSchema());
+
+
+        try {
+            $client = Elasticsearch\ClientBuilder::create()->setHosts(
+                [
+                [
+                    'port' => 9200,
+                    'scheme' => 'http'
+                ]
+                ]
+            )->build();
+            $this->fail("Expected RuntimeException from missing host, none thrown");
+        } catch (Elasticsearch\Common\Exceptions\RuntimeException $e) {
+            // good
+        }
+
+        // Underscore host, questionably legal, but inline method would break
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'the_foo.com'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("the_foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+
+
+        // Special characters in user/pass, would break inline
+        $client = Elasticsearch\ClientBuilder::create()->setHosts(
+            [
+            [
+                'host' => 'foo.com',
+                'user' => 'user',
+                'pass' => 'abc#$@?%!abc'
+            ]
+            ]
+        )->build();
+        $host = $client->transport->getConnection();
+        $this->assertSame("foo.com:9200", $host->getHost());
+        $this->assertSame("http", $host->getTransportSchema());
+        $this->assertSame("user:abc#$@?%!abc", $host->getUserPass());
     }
 }

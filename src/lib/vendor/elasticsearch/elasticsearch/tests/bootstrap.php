@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 4/30/13
- * Time: 4:05 PM
- */
+
+declare(strict_types = 1);
 
 error_reporting(E_ALL | E_STRICT);
 
@@ -18,4 +15,4 @@ if (!file_exists(dirname(__DIR__) . '/composer.lock')) {
 }
 
 // Include the composer autoloader
-$autoloader = require_once(dirname(__DIR__) . '/vendor/autoload.php');
+$autoloader = require_once dirname(__DIR__) . '/vendor/autoload.php';

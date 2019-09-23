@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 5/1/13
- * Time: 10:02 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\ConnectionPool\Selectors;
 
@@ -14,26 +11,21 @@ use Elasticsearch\Connections\ConnectionInterface;
  *
  * @category Elasticsearch
  * @package  Elasticsearch\Connections\Selectors\RandomSelector
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
 class RandomSelector implements SelectorInterface
 {
-
-
     /**
      * Select a random connection from the provided array
      *
-     * @param array $connections Array of Connection objects
+     * @param  ConnectionInterface[] $connections an array of ConnectionInterface instances to choose from
      *
-     * @return ConnectionInterface
+     * @return \Elasticsearch\Connections\ConnectionInterface
      */
     public function select($connections)
     {
         return $connections[array_rand($connections)];
-
     }
-
-
-}//end class
+}

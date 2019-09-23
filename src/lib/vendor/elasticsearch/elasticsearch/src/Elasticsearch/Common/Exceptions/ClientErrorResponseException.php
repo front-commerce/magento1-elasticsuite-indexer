@@ -1,20 +1,17 @@
 <?php
-/**
- * User: zach
- * Date: 5/7/13
- * Time: 3:04 PM
- *
- * @category Elasticsearch
- * @package  Elasticsearch\Common\Exceptions
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
- * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
- */
+
+declare(strict_types = 1);
+
 namespace Elasticsearch\Common\Exceptions;
 
 /**
  * Class ClientErrorResponseException
- * @package Elasticsearch\Common\Exceptions
+ *
+ * @category Elasticsearch
+ * @package  Elasticsearch\Common\Exceptions
+ * @author   Zachary Tong <zach@elastic.co>
+ * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
+ * @link     http://elastic.co
  */
 class ClientErrorResponseException extends TransportException implements ElasticsearchException
 {

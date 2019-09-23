@@ -1,21 +1,66 @@
 language: php
-php:
-  - "5.5"
-  - "5.4"
-  - "5.3"
+
+services:
+  - docker
+
+branches:
+  except:
+    - 0.4
+
+sudo: true
+
+matrix:
+  fast_finish: true
+  include:
+    - php: 7.0
+      env: ES_VERSION="6.7.0"
+
+    - php: 7.1
+      env: ES_VERSION="6.7.0"
+
+    - php: 7.2
+      env: ES_VERSION="6.7.0"
+
+    - php: 7.3
+      env: ES_VERSION="6.0.0"
+    - php: 7.3
+      env: ES_VERSION="6.1.0"
+    - php: 7.3
+      env: ES_VERSION="6.2.0"
+    - php: 7.3
+      env: ES_VERSION="6.3.0"
+    - php: 7.3
+      env: ES_VERSION="6.4.0"
+    - php: 7.3
+      env: ES_VERSION="6.5.0"
+    - php: 7.3
+      env: ES_VERSION="6.6.0"
+    - php: 7.3
+      env: ES_VERSION="6.7.0"
+
 env:
-  - ES_VERSION=0.90.0 ES_TEST_HOST=http://localhost:9200
-  - ES_VERSION=0.90.1 ES_TEST_HOST=http://localhost:9200
-  - ES_VERSION=0.90.2 ES_TEST_HOST=http://localhost:9200
-  - ES_VERSION=0.90.3 ES_TEST_HOST=http://localhost:9200
-  - ES_VERSION=0.90.4 ES_TEST_HOST=http://localhost:9200
-  - ES_VERSION=0.90.5 ES_TEST_HOST=http://localhost:9200
+  global:
+    - ES_TEST_HOST=http://localhost:9200
+
+before_install:
+  - ./travis/run_es_docker.sh
+
+install:
+  - composer install --prefer-dist
 
 before_script:
-  - composer install --dev
-  - mkdir -p build/logs
+  - if [ $TRAVIS_PHP_VERSION = '7.3' ]; then PHPUNIT_FLAGS="--coverage-clover ./build/logs/clover.xml"; fi
+  - php util/RestSpecRunner.php
+  - php util/EnsureClusterAlive.php
 
-script: ./run_travis_test.sh
+script:
+  - if [ $TRAVIS_PHP_VERSION != '7.3' ]; then composer run-script phpcs; fi
+  - composer run-script phpstan
+  - vendor/bin/phpunit $PHPUNIT_FLAGS
+  - vendor/bin/phpunit -c phpunit-integration.xml --group sync $PHPUNIT_FLAGS
 
 after_script:
- - php vendor/bin/coveralls -v
+  - if [ $TRAVIS_PHP_VERSION = '7.3' ]; then php vendor/bin/coveralls; fi
+
+notifications:
+  email: true

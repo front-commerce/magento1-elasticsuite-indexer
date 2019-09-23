@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 6/17/13
- * Time: 3:14 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Common\Exceptions\Curl;
 
@@ -12,7 +9,12 @@ use Elasticsearch\Common\Exceptions\TransportException;
 
 /**
  * Class CouldNotConnectToHost
- * @package Elasticsearch\Common\Exceptions\Curl
+ *
+ * @category Elasticsearch
+ * @package  Elasticsearch\Common\Exceptions\Curl
+ * @author   Zachary Tong <zach@elastic.co>
+ * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
+ * @link     http://elastic.co
  */
 class CouldNotConnectToHost extends TransportException implements ElasticsearchException
 {

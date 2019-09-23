@@ -1,36 +1,37 @@
 <?php
-/**
- * User: zach
- * Date: 01/20/2014
- * Time: 14:34:49 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Cluster\Nodes;
-
-use Elasticsearch\Endpoints\AbstractEndpoint;
-use Elasticsearch\Common\Exceptions;
 
 /**
  * Class Stats
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints\Cluster\Nodes
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints\Cluster\Nodes
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class Stats extends AbstractNodesEndpoint
 {
-    // Limit the information returned to the specified metrics
+    /**
+     * Limit the information returned to the specified metrics
+     *
+     * @var string
+     */
     private $metric;
 
-
-    // Limit the information returned for `indices` metric to the specific index metrics. Isn&#039;t used if `indices` (or `all`) metric isn&#039;t specified.
+    /**
+     * Limit the information returned for `indices` metric to the specific index metrics.
+     * Isn't used if `indices` (or `all`) metric isn't specified.
+     *
+     * @var string
+     */
     private $indexMetric;
 
     /**
-     * @param $metric
+     * @param string|string[] $metric
      *
      * @return $this
      */
@@ -45,12 +46,12 @@ class Stats extends AbstractNodesEndpoint
         }
 
         $this->metric = $metric;
+
         return $this;
     }
 
-
     /**
-     * @param $indexMetric
+     * @param string $indexMetric
      *
      * @return $this
      */
@@ -65,14 +66,14 @@ class Stats extends AbstractNodesEndpoint
         }
 
         $this->indexMetric = $indexMetric;
+
         return $this;
     }
-
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         $metric = $this->metric;
         $index_metric = $this->indexMetric;
@@ -94,11 +95,10 @@ class Stats extends AbstractNodesEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'completion_fields',
@@ -108,14 +108,14 @@ class Stats extends AbstractNodesEndpoint
             'human',
             'level',
             'types',
+            'include_segment_file_sizes',
         );
     }
-
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'GET';
     }

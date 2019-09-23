@@ -1,8 +1,14 @@
 <?php
 
+declare(strict_types = 1);
+
 namespace Elasticsearch\Tests\ConnectionPool;
+
 use Elasticsearch;
-use Elasticsearch\Common\Exceptions\NoNodesAvailableException;
+use Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector;
+use Elasticsearch\ConnectionPool\StaticConnectionPool;
+use Elasticsearch\Connections\Connection;
+use Elasticsearch\Connections\ConnectionFactory;
 use Mockery as m;
 
 /**
@@ -15,16 +21,16 @@ use Mockery as m;
  * @license    http://www.apache.org/licenses/LICENSE-2.0 Apache2
  * @link       http://elasticsearch.org
  */
-class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
+class StaticConnectionPoolTest extends \PHPUnit\Framework\TestCase
 {
-
-    public function tearDown() {
+    public function tearDown()
+    {
         m::close();
     }
 
     public function testAddOneHostThenGetConnection()
     {
-        $mockConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        $mockConnection = m::mock(Connection::class)
                           ->shouldReceive('ping')
                           ->andReturn(true)
                           ->getMock()
@@ -33,32 +39,34 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
                           ->getMock()
                           ->shouldReceive('markDead')->once()->getMock();
 
-        $connections = array($mockConnection);
+        /**
+ * @var \Elasticsearch\Connections\Connection[]&\Mockery\MockInterface[] $connections
+*/
+        $connections = [$mockConnection];
 
-        $selector = m::mock('\Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector')
+        $selector = m::mock(RoundRobinSelector::class)
                     ->shouldReceive('select')
                     ->andReturn($connections[0])
                     ->getMock();
 
-        $connectionFactory = m::mock('\Elasticsearch\Connections\ConnectionFactory');
+        $connectionFactory = m::mock(ConnectionFactory::class);
 
-        $randomizeHosts = false;
-        $connectionPool = new \Elasticsearch\ConnectionPool\StaticConnectionPool($connections, $selector, $connectionFactory, $randomizeHosts);
+        $connectionPoolParams = [
+            'randomizeHosts' => false,
+        ];
+        $connectionPool = new StaticConnectionPool($connections, $selector, $connectionFactory, $connectionPoolParams);
 
         $retConnection = $connectionPool->nextConnection();
 
-        $this->assertEquals($mockConnection, $retConnection);
-
+        $this->assertSame($mockConnection, $retConnection);
     }
-
 
     public function testAddMultipleHostsThenGetFirst()
     {
+        $connections = [];
 
-        $connections = array();
-
-        foreach (range(1,10) as $index) {
-            $mockConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        foreach (range(1, 10) as $index) {
+            $mockConnection = m::mock(Connection::class)
                               ->shouldReceive('ping')
                               ->andReturn(true)
                               ->getMock()
@@ -70,32 +78,29 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
             $connections[] = $mockConnection;
         }
 
-        $selector = m::mock('\Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector')
+        $selector = m::mock(RoundRobinSelector::class)
             ->shouldReceive('select')
             ->andReturn($connections[0])
             ->getMock();
 
-        $connectionFactory = m::mock('\Elasticsearch\Connections\ConnectionFactory');
+        $connectionFactory = m::mock(ConnectionFactory::class);
 
-        $randomizeHosts = false;
-        $connectionPool = new \Elasticsearch\ConnectionPool\StaticConnectionPool($connections, $selector, $connectionFactory, $randomizeHosts);
+        $connectionPoolParams = [
+            'randomizeHosts' => false,
+        ];
+        $connectionPool = new StaticConnectionPool($connections, $selector, $connectionFactory, $connectionPoolParams);
 
         $retConnection = $connectionPool->nextConnection();
 
-        $this->assertEquals($connections[0], $retConnection);
+        $this->assertSame($connections[0], $retConnection);
     }
 
-
-    /**
-     * @expectedException Elasticsearch\Common\Exceptions\NoNodesAvailableException
-     */
     public function testAllHostsFailPing()
     {
+        $connections = [];
 
-        $connections = array();
-
-        foreach (range(1,10) as $index) {
-            $mockConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        foreach (range(1, 10) as $index) {
+            $mockConnection = m::mock(Connection::class)
                               ->shouldReceive('ping')
                               ->andReturn(false)
                               ->getMock()
@@ -109,28 +114,30 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
             $connections[] = $mockConnection;
         }
 
-        $selector = m::mock('\Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector')
+        $selector = m::mock(RoundRobinSelector::class)
                     ->shouldReceive('select')
                     ->andReturnValues($connections)
                     ->getMock();
 
-        $connectionFactory = m::mock('\Elasticsearch\Connections\ConnectionFactory');
+        $connectionFactory = m::mock(ConnectionFactory::class);
 
-        $randomizeHosts = false;
-        $connectionPool = new \Elasticsearch\ConnectionPool\StaticConnectionPool($connections, $selector, $connectionFactory, $randomizeHosts);
+        $connectionPoolParams = [
+            'randomizeHosts' => false,
+        ];
+        $connectionPool = new StaticConnectionPool($connections, $selector, $connectionFactory, $connectionPoolParams);
+
+        $this->expectException(\Elasticsearch\Common\Exceptions\NoNodesAvailableException::class);
+        $this->expectExceptionMessage('No alive nodes found in your cluster');
 
         $connectionPool->nextConnection();
-
     }
-
 
     public function testAllExceptLastHostFailPingRevivesInSkip()
     {
+        $connections = [];
 
-        $connections = array();
-
-        foreach (range(1,9) as $index) {
-            $mockConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        foreach (range(1, 9) as $index) {
+            $mockConnection = m::mock(Connection::class)
                               ->shouldReceive('ping')
                               ->andReturn(false)
                               ->getMock()
@@ -144,7 +151,7 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
             $connections[] = $mockConnection;
         }
 
-        $goodConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        $goodConnection = m::mock(Connection::class)
                           ->shouldReceive('ping')->once()
                           ->andReturn(true)
                           ->getMock()
@@ -157,28 +164,28 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
 
         $connections[] = $goodConnection;
 
-        $selector = m::mock('\Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector')
+        $selector = m::mock(RoundRobinSelector::class)
                     ->shouldReceive('select')
                     ->andReturnValues($connections)
                     ->getMock();
 
-        $connectionFactory = m::mock('\Elasticsearch\Connections\ConnectionFactory');
+        $connectionFactory = m::mock(ConnectionFactory::class);
 
-        $randomizeHosts = false;
-        $connectionPool = new \Elasticsearch\ConnectionPool\StaticConnectionPool($connections, $selector, $connectionFactory, $randomizeHosts);
+        $connectionPoolParams = [
+            'randomizeHosts' => false,
+        ];
+        $connectionPool = new StaticConnectionPool($connections, $selector, $connectionFactory, $connectionPoolParams);
 
         $ret = $connectionPool->nextConnection();
-        $this->assertEquals($goodConnection, $ret);
-
+        $this->assertSame($goodConnection, $ret);
     }
 
     public function testAllExceptLastHostFailPingRevivesPreSkip()
     {
+        $connections = [];
 
-        $connections = array();
-
-        foreach (range(1,9) as $index) {
-            $mockConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        foreach (range(1, 9) as $index) {
+            $mockConnection = m::mock(Connection::class)
                               ->shouldReceive('ping')
                               ->andReturn(false)
                               ->getMock()
@@ -192,7 +199,7 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
             $connections[] = $mockConnection;
         }
 
-        $goodConnection = m::mock('\Elasticsearch\Connections\GuzzleConnection')
+        $goodConnection = m::mock(Connection::class)
                           ->shouldReceive('ping')->once()
                           ->andReturn(true)
                           ->getMock()
@@ -205,20 +212,34 @@ class StaticConnectionPoolTest extends \PHPUnit_Framework_TestCase
 
         $connections[] = $goodConnection;
 
-        $selector = m::mock('\Elasticsearch\ConnectionPool\Selectors\RoundRobinSelector')
+        $selector = m::mock(RoundRobinSelector::class)
                     ->shouldReceive('select')
                     ->andReturnValues($connections)
                     ->getMock();
 
-        $connectionFactory = m::mock('\Elasticsearch\Connections\ConnectionFactory');
+        $connectionFactory = m::mock(ConnectionFactory::class);
 
-        $randomizeHosts = false;
-        $connectionPool = new \Elasticsearch\ConnectionPool\StaticConnectionPool($connections, $selector, $connectionFactory, $randomizeHosts);
+        $connectionPoolParams = [
+            'randomizeHosts' => false,
+        ];
+        $connectionPool = new StaticConnectionPool($connections, $selector, $connectionFactory, $connectionPoolParams);
 
         $ret = $connectionPool->nextConnection();
-        $this->assertEquals($goodConnection, $ret);
-
+        $this->assertSame($goodConnection, $ret);
     }
 
+    public function testCustomConnectionPoolIT()
+    {
+        $clientBuilder = \Elasticsearch\ClientBuilder::create();
+        $clientBuilder->setHosts(['localhost:1']);
+        $client = $clientBuilder
+            ->setRetries(0)
+            ->setConnectionPool(StaticConnectionPool::class, [])
+            ->build();
 
+        $this->expectException(Elasticsearch\Common\Exceptions\NoNodesAvailableException::class);
+        $this->expectExceptionMessage('No alive nodes found in your cluster');
+
+        $client->search([]);
+    }
 }

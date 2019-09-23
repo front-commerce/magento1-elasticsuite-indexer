@@ -1,12 +1,8 @@
 <?php
-/**
- * User: zach
- * Date: 9/24/13
- * Time: 9:38 AM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\ConnectionPool\Selectors;
-
 
 use Elasticsearch\Connections\ConnectionInterface;
 
@@ -15,25 +11,26 @@ use Elasticsearch\Connections\ConnectionInterface;
  *
  * @category Elasticsearch
  * @package  Elasticsearch\ConnectionPool\Selectors\ConnectionPool
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
 class StickyRoundRobinSelector implements SelectorInterface
 {
-
     /**
      * @var int
      */
     private $current = 0;
 
-    /** @var int  */
+    /**
+     * @var int
+     */
     private $currentCounter = 0;
 
     /**
      * Use current connection unless it is dead, otherwise round-robin
      *
-     * @param array $connections Array of connections to choose from
+     * @param ConnectionInterface[] $connections Array of connections to choose from
      *
      * @return ConnectionInterface
      */
@@ -48,7 +45,5 @@ class StickyRoundRobinSelector implements SelectorInterface
         $this->current = $this->currentCounter % count($connections);
 
         return $connections[$this->current];
-
     }
-
 }

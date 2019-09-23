@@ -1,33 +1,33 @@
 <?php
-/**
- * User: zach
- * Date: 01/20/2014
- * Time: 14:34:49 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Cluster;
 
 use Elasticsearch\Endpoints\AbstractEndpoint;
-use Elasticsearch\Common\Exceptions;
 
 /**
  * Class Stats
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints\Cluster
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints\Cluster
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class Stats extends AbstractEndpoint
 {
-    // A comma-separated list of node IDs or names to limit the returned information; use `_local` to return information from the node you&#039;re connecting to, leave empty to get information from all nodes
+    /**
+     * A comma-separated list of node IDs or names to limit the returned information;
+     * use `_local` to return information from the node you're connecting to,
+     * leave empty to get information from all nodes
+     *
+     * @var string
+     */
     private $nodeID;
 
-
     /**
-     * @param $node_id
+     * @param string $node_id
      *
      * @return $this
      */
@@ -38,14 +38,14 @@ class Stats extends AbstractEndpoint
         }
 
         $this->nodeID = $node_id;
+
         return $this;
     }
-
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         $node_id = $this->nodeID;
         $uri   = "/_cluster/stats";
@@ -57,11 +57,10 @@ class Stats extends AbstractEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'flat_settings',
@@ -69,11 +68,10 @@ class Stats extends AbstractEndpoint
         );
     }
 
-
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'GET';
     }

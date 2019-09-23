@@ -1,25 +1,23 @@
 <?php
-/**
- * User: zach
- * Date: 5/1/13
- * Time: 10:00 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Serializers;
+
+use Elasticsearch\Common\Exceptions;
+use Elasticsearch\Common\Exceptions\Serializer\JsonErrorException;
 
 /**
  * Class SmartSerializer
  *
  * @category Elasticsearch
  * @package  Elasticsearch\Serializers\JSONSerializer
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
 class SmartSerializer implements SerializerInterface
 {
-
-
     /**
      * Serialize assoc array into JSON string
      *
@@ -32,42 +30,65 @@ class SmartSerializer implements SerializerInterface
         if (is_string($data) === true) {
             return $data;
         } else {
-            $data = json_encode($data);
+            $data = json_encode($data, JSON_PRESERVE_ZERO_FRACTION);
+            if ($data === false) {
+                throw new Exceptions\RuntimeException("Failed to JSON encode: ".json_last_error());
+            }
             if ($data === '[]') {
                 return '{}';
             } else {
                 return $data;
             }
         }
-
-
     }
 
-
     /**
-     * Deserialize by introspecting content_type.  Tries to deserialize JSON,
+     * Deserialize by introspecting content_type. Tries to deserialize JSON,
      * otherwise returns string
      *
      * @param string $data JSON encoded string
      * @param array  $headers Response Headers
      *
+     * @throws JsonErrorException
      * @return array
      */
     public function deserialize($data, $headers)
     {
         if (isset($headers['content_type']) === true) {
             if (strpos($headers['content_type'], 'json') !== false) {
-                return json_decode($data, true);
+                return $this->decode($data);
             } else {
                 //Not json, return as string
                 return $data;
             }
-
         } else {
             //No content headers, assume json
-            return json_decode($data, true);
+            return $this->decode($data);
+        }
+    }
+
+    /**
+     * @todo For 2.0, remove the E_NOTICE check before raising the exception.
+     *
+     * @param string|null $data
+     *
+     * @return array
+     * @throws JsonErrorException
+     */
+    private function decode($data)
+    {
+        if ($data === null || strlen($data) === 0) {
+            return "";
         }
 
+        $result = @json_decode($data, true);
 
+        // Throw exception only if E_NOTICE is on to maintain backwards-compatibility on systems that silently ignore E_NOTICEs.
+        if (json_last_error() !== JSON_ERROR_NONE && (error_reporting() & E_NOTICE) === E_NOTICE) {
+            $e = new JsonErrorException(json_last_error(), $data, $result);
+            throw $e;
+        }
+
+        return $result;
     }
 }
