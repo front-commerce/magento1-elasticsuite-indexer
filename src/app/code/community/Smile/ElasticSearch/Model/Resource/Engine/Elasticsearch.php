@@ -329,6 +329,11 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         return true;
     }
 
+    public function isLeyeredNavigationAllowed()
+    {
+        return $this->isLayeredNavigationAllowed();
+    }
+
     /**
      * Prepares index data.
      * Should be overriden in child classes if needed.
