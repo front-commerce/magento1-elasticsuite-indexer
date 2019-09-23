@@ -186,16 +186,6 @@
         </translate>
     </adminhtml>
 
-    <frontend>
-        <layout>
-            <updates>
-                <smile_virtualattributes>
-                    <file>smile/virtualattributes.xml</file>
-                </smile_virtualattributes>
-            </updates>
-        </layout>
-    </frontend>
-
     <default>
         <general>
             <validator_data>
