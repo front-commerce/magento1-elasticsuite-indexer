@@ -144,15 +144,12 @@ public function addCmsPageMappingToIndex(Varien_Event_Observer $observer)
         foreach (array('title', 'content') as $field) {
           $field = $field . '_' . $languageCode;
           $properties[$field] = array(
-            'type' => 'multi_field',
+            'type' => 'string',
+            'boost' => $weight > 0 ? $weight : 1,
             'fields' => array(
-              $field => array(
-                'type' => 'string',
-                'boost' => $weight > 0 ? $weight : 1,
-              ),
               'untouched' => array(
-                'type' => 'string',
-                'index' => 'not_analyzed',
+                'type' => 'keyword',
+                'index' => true,
                ),
             ),
           );

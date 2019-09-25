@@ -196,7 +196,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
 
         $useOptions        = isset($mapping['properties']['options_' . $field . '_' . $languageCode]);
         $typesUsingOptions = array(self::FIELD_TYPE_SEARCH, self::FIELD_TYPE_SORT, self::FIELD_TYPE_FACET);
-        $typesUsedInSearch = array('string', 'multi_field');
+        $typesUsedInSearch = array('text', 'keyword');
 
         if (in_array($type, $typesUsingOptions) && $useOptions) {
             $field = 'options_' . $field . '_' . $languageCode;
@@ -211,7 +211,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
                 $field = false;
             }
 
-            if ($field && $mappingType == 'multi_field') {
+            if ($field && $mappingType == 'text') {
                 if ($analyzer == null && in_array($type, array(self::FIELD_TYPE_FILTER, self::FIELD_TYPE_FACET))) {
                     $analyzer = 'untouched';
                 } else if ($analyzer == null && $type == self::FIELD_TYPE_SORT) {
@@ -238,12 +238,12 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         foreach ($this->_stores as $store) {
             $languageCode = $this->_helper->getLanguageCodeByStore($store);
             $defaultAnalyzer = 'analyzer_' . $languageCode;
-            $baseFieldProperties = array('type' => 'string', 'store' => false, 'fielddata' => array('format' => 'disabled'));
+            $baseFieldProperties = array('type' => 'text', 'store' => false);
             foreach (array('search', 'spelling', 'autocomplete') as $currentField) {
                 $currentIndexField = sprintf('%s_%s', $currentField, $languageCode);
-                $mapping[$currentIndexField]['type'] = 'multi_field';
+                $mapping[$currentIndexField] = $baseFieldProperties;
+                $mapping[$currentIndexField]['analyzer'] = $defaultAnalyzer;
                 $mapping[$currentIndexField]['fields'] = array(
-                    $currentIndexField => array_merge(array('analyzer' => $defaultAnalyzer), $baseFieldProperties),
                     'whitespace'       => array_merge(array('analyzer' => 'whitespace'), $baseFieldProperties),
                 );
 
@@ -285,16 +285,16 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
      * @return array string
      */
     protected function _getStringMapping(
-        $fieldName, $languageCode, $type = 'string', $sortable = false,
+        $fieldName, $languageCode, $type = 'text', $sortable = false,
         $fuzzy = true, $facet = true, $autocomplete = true, $searchable = true
     ) {
         $mapping = array();
 
         $analyzers = array('whitespace');
 
-        $mapping[$fieldName] = array('type' => 'multi_field', 'fields' => array());
-        $mapping[$fieldName]['fields'][$fieldName] = array(
-            'type' => $type, 'analyzer' => 'analyzer_' . $languageCode, 'store' => false, 'fielddata' => array('format' => 'disabled')
+        $mapping[$fieldName] = array(
+            'type' => $type, 'analyzer' => 'analyzer_' . $languageCode, 'store' => false,
+            'fields' => array()
         );
 
         if ($autocomplete == true || $facet == true) {
@@ -302,12 +302,12 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
 
             if ($facet == true) {
                 $mapping[$fieldName]['fields']['untouched'] = array(
-                    'type' => $type, 'index' => 'not_analyzed', 'store' => false, 'fielddata' => array('format' => 'doc_values')
+                    'type' => $type === 'text' ? 'keyword' : $type, 'index' => true, 'store' => false
                 );
             }
 
             if ($autocomplete == true) {
-                $mapping[$fieldName]['fields'][$fieldName]['copy_to'][] = 'autocomplete_' . $languageCode;
+                $mapping[$fieldName]['copy_to'][] = 'autocomplete_' . $languageCode;
             }
         }
 
@@ -316,7 +316,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         }
 
         if ($fuzzy == true) {
-            $mapping[$fieldName]['fields'][$fieldName]['copy_to'][] = 'spelling_' . $languageCode;
+            $mapping[$fieldName]['copy_to'][] = 'spelling_' . $languageCode;
         }
 
         if ($this->getCurrentIndex()->isPhoneticSupported($languageCode)) {
@@ -332,7 +332,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         }
 
         if ($searchable) {
-            $mapping[$fieldName]['fields'][$fieldName]['copy_to'][] = 'search_' . $languageCode;
+            $mapping[$fieldName]['copy_to'][] = 'search_' . $languageCode;
         }
 
         return $mapping;

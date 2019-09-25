@@ -99,7 +99,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
             $usedForSortBy = (bool) $attribute->getUsedForSortBy();
             $isAutocomplete = (bool) ($attribute->getIsUsedInAutocomplete() || $attribute->getIsDisplayedInAutocomplete());
 
-            if ($type === 'string' && !$attribute->getBackendModel() && $attribute->getFrontendInput() != 'media_image') {
+            if ($type === 'text' && !$attribute->getBackendModel() && $attribute->getFrontendInput() != 'media_image') {
                 foreach ($this->_stores as $store) {
                     $languageCode = $this->_helper->getLanguageCodeByStore($store);
                     $fieldName = $attributeCode . '_' . $languageCode;
@@ -132,7 +132,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                     $languageCode = $this->_helper->getLanguageCodeByStore($store);
                     $fieldName = 'options' . '_' .  $attributeCode . '_' . $languageCode;
                     $fieldMapping = $this->_getStringMapping(
-                        $fieldName, $languageCode, 'string', $usedForSortBy, $isFuzzy, $isFacet, $isAutocomplete, $isSearchable
+                        $fieldName, $languageCode, 'text', $usedForSortBy, $isFuzzy, $isFacet, $isAutocomplete, $isSearchable
                     );
                     $mapping = array_merge($mapping, $fieldMapping);
                 }
@@ -151,7 +151,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
      */
     protected function _getAttributeType($attribute)
     {
-        $type = 'string';
+        $type = 'text';
         if ($attribute->getBackendType() == 'int' || $attribute->getFrontendClass() == 'validate-digits') {
             $type = 'integer';
         } elseif ($attribute->getBackendType() == 'decimal' || $attribute->getFrontendClass() == 'validate-number') {
@@ -163,7 +163,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
         } elseif ($attribute->usesSource() && $attribute->getSourceModel() === null) {
             $type = 'integer';
         } else if ($attribute->usesSource()) {
-            $type = 'string';
+            $type = 'text';
         }
 
         return $type;

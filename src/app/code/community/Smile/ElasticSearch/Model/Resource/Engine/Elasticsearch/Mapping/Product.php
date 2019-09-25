@@ -66,7 +66,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
 
         foreach ($this->_stores as $store) {
             $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
-            $fieldMapping = $this->_getStringMapping('category_name_' . $languageCode, $languageCode, 'string', true, true, true);
+            $fieldMapping = $this->_getStringMapping('category_name_' . $languageCode, $languageCode, 'text', true, true, true);
             $mapping['properties'] = array_merge($mapping['properties'], $fieldMapping);
         }
 
