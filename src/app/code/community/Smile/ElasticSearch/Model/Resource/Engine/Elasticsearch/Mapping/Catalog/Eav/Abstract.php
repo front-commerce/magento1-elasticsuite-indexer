@@ -70,9 +70,9 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
             $mapping['properties'] = array_merge($mapping['properties'], $this->_getAttributeMapping($attribute));
         }
 
-        $mapping['properties']['unique']   = array('type' => 'string', 'store' => false, 'index' => 'not_analyzed');
-        $mapping['properties']['id']       = array('type' => 'long', 'store' => false, 'index' => 'not_analyzed');
-        $mapping['properties']['store_id'] = array('type' => 'integer', 'store' => false, 'index' => 'not_analyzed');
+        $mapping['properties']['unique']   = array('type' => 'keyword', 'store' => false, 'index' => true);
+        $mapping['properties']['id']       = array('type' => 'long', 'store' => false, 'index' => true);
+        $mapping['properties']['store_id'] = array('type' => 'integer', 'store' => false, 'index' => true);
 
         return $mapping;
     }
