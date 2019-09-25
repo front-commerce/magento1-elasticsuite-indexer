@@ -123,7 +123,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                 );
             } else {
                 $mapping[$attributeCode] = array(
-                    'type' => $type, 'store' => false, 'fielddata' => array('format' => $type == 'string' ? 'disabled' :'doc_values')
+                    'type' => $type, 'store' => false
                 );
             }
 

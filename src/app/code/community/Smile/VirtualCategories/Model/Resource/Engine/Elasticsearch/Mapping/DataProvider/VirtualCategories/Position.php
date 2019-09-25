@@ -59,8 +59,8 @@ class Smile_VirtualCategories_Model_Resource_Engine_Elasticsearch_Mapping_DataPr
         $mapping['properties']['virtual_category_position'] = array(
             'type'       => 'nested',
             'properties' => array(
-                'virtual_category_id'       => array('type' => 'long', 'fielddata' => array('format' => 'doc_values')),
-                'category_product_position' => array('type' => 'long', 'fielddata' => array('format' => 'doc_values'))
+                'virtual_category_id'       => array('type' => 'long'),
+                'category_product_position' => array('type' => 'long')
             )
         );
 

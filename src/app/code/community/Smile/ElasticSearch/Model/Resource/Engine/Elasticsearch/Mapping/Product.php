@@ -60,9 +60,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     protected function _getMappingProperties()
     {
         $mapping = parent::_getMappingProperties(true);
-        $mapping['properties']['categories'] = array('type' => 'long', 'fielddata' => array('format' => 'doc_values'));
-        $mapping['properties']['show_in_categories'] = array('type' => 'long', 'fielddata' => array('format' => 'doc_values'));
-        $mapping['properties']['in_stock']   = array('type' => 'boolean', 'fielddata' => array('format' => 'doc_values'));
+        $mapping['properties']['categories'] = array('type' => 'long');
+        $mapping['properties']['show_in_categories'] = array('type' => 'long');
+        $mapping['properties']['in_stock']   = array('type' => 'boolean');
 
         foreach ($this->_stores as $store) {
             $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
@@ -73,19 +73,19 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
         $mapping['properties']['category_position'] = array(
             'type' => 'nested',
             'properties' => array(
-                'category_id' => array('type' => 'long', 'fielddata' => array('format' => 'doc_values')),
-                'position'    => array('type' => 'long', 'fielddata' => array('format' => 'doc_values'))
+                'category_id' => array('type' => 'long'),
+                'position'    => array('type' => 'long')
             )
         );
 
         // Append dynamic mapping for product prices and discount fields
         $fieldTemplate = array(
-            'match' => 'price_*', 'mapping' => array('type' => 'double', 'fielddata' => array('format' => 'doc_values'))
+            'match' => 'price_*', 'mapping' => array('type' => 'double')
         );
         $mapping['dynamic_templates'][] = array('prices' => $fieldTemplate);
 
         $fieldTemplate = array(
-            'match' => 'has_discount_*', 'mapping' => array('type' => 'boolean', 'fielddata' => array('format' => 'doc_values'))
+            'match' => 'has_discount_*', 'mapping' => array('type' => 'boolean')
         );
         $mapping['dynamic_templates'][] = array('has_discount' => $fieldTemplate);
 
