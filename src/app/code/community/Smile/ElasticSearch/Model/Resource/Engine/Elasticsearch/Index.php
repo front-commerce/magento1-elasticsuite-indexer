@@ -95,8 +95,10 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     {
         $mappingConfig = Mage::getConfig()->getNode(self::MAPPING_CONF_ROOT_NODE)->asArray();
         foreach ($mappingConfig as $type => $config) {
-            $this->_mappings[$type] = Mage::getResourceSingleton($config['model']);
-            $this->_mappings[$type]->setType($type);
+            if ($type === "product") {
+                $this->_mappings[$type] = Mage::getResourceSingleton($config['model']);
+                $this->_mappings[$type]->setType($type);
+            }
         }
     }
 
@@ -339,6 +341,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
 
                 $mapping = $params;
                 foreach ($this->_mappings as $type => $mappingModel) {
+                    // TODO Create different indexes, since indexes cannot contain several types anymore since 6.0
                     $mapping['body']['mappings'][$type] = $mappingModel->getMappingProperties(false);
                 }
 
