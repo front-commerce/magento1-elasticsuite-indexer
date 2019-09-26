@@ -580,7 +580,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                 'type'   => $type,
                 'size'   => self::COPY_DATA_BULK_SIZE,
                 'scroll' => '5m',
-                'search_type' => 'scan'
             );
 
             $scroll = $this->getClient()->search($scrollQuery);

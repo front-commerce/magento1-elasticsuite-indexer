@@ -102,8 +102,9 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
             'type'  => $this->_mapping->getType(),
             'size'  => $bulkSize,
             'scroll'      => '5m',
-            'search_type' => 'scan',
-            'body'   => array("query"  => array("term" => array("store_id" => $storeId)), "fields" => array())
+            'body'   => array(
+                "query"  => array("term" => array("store_id" => $storeId)), "sort" => array("_doc")
+            )
         );
 
         $scroll = $this->getClient()->search($scrollQuery);
