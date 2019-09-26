@@ -1,5 +1,10 @@
 <?php
-use Elasticsearch\Common\Exceptions\NoNodesAvailableException;
+
+declare(strict_types = 1);
+
+namespace Elasticsearch\Tests\ConnectionPool;
+
+use Elasticsearch\ClientBuilder;
 use Elasticsearch\ConnectionPool\SniffingConnectionPool;
 
 /**
@@ -12,16 +17,21 @@ use Elasticsearch\ConnectionPool\SniffingConnectionPool;
  * @license    http://www.apache.org/licenses/LICENSE-2.0 Apache2
  * @link       http://elasticsearch.org
  */
-class SniffingConnectionPoolIntegrationTest extends \PHPUnit_Framework_TestCase
+class SniffingConnectionPoolIntegrationTest extends \PHPUnit\Framework\TestCase
 {
-    public function testSniff() {
-        $params['connectionPoolClass'] = '\Elasticsearch\ConnectionPool\SniffingConnectionPool';
-        $params['connectionPoolParams']['sniffingInterval'] = -10;
-        $params['hosts'] = array ($_SERVER['ES_TEST_HOST']);
+    protected function setUp()
+    {
+        static::markTestSkipped("All of Sniffing unit tests use outdated cluster state format, need to redo");
+    }
 
-        $client = new \Elasticsearch\Client($params);
+    public function testSniff()
+    {
+        $client = ClientBuilder::create()
+            ->setHosts([getenv('ES_TEST_HOST')])
+            ->setConnectionPool(SniffingConnectionPool::class, ['sniffingInterval' => -10])
+            ->build();
 
-        $client->ping();
-
+        $pinged = $client->ping();
+        $this->assertTrue($pinged);
     }
 }

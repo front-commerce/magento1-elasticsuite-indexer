@@ -63,8 +63,8 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_DataProvid
         $mapping['properties']['search_terms_position'] = array(
             'type' => 'nested',
             'properties' => array(
-                'query_id'              => array('type' => 'long', 'fielddata' => array('format' => 'doc_values')),
-                'term_product_position' => array('type' => 'long', 'fielddata' => array('format' => 'doc_values'))
+                'query_id'              => array('type' => 'long'),
+                'term_product_position' => array('type' => 'long')
             )
         );
 

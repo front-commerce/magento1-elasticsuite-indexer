@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 5/9/13
- * Time: 5:13 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Namespaces;
 
@@ -12,13 +9,12 @@ namespace Elasticsearch\Namespaces;
  *
  * @category Elasticsearch
  * @package  Elasticsearch\Namespaces\ClusterNamespace
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
 class ClusterNamespace extends AbstractNamespace
 {
-
     /**
      * $params['index']                      = (string) Limit the information returned to a specific index
      *        ['level']                      = (enum) Specify the level of detail for returned information
@@ -30,7 +26,7 @@ class ClusterNamespace extends AbstractNamespace
      *        ['wait_for_relocating_shards'] = (number) Wait until the specified number of relocating shards is finished
      *        ['wait_for_status']            = (enum) Wait until cluster is in a specific state
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
@@ -38,19 +34,16 @@ class ClusterNamespace extends AbstractNamespace
     {
         $index = $this->extractArgument($params, 'index');
 
-
-
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\Health $endpoint */
         $endpoint = $endpointBuilder('Cluster\Health');
         $endpoint->setIndex($index);
         $endpoint->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
-    }
 
+        return $this->performRequest($endpoint);
+    }
 
     /**
      * $params['dry_run']         = (boolean) Simulate the operation only and return the resulting state
@@ -58,7 +51,7 @@ class ClusterNamespace extends AbstractNamespace
      *        ['body']            = (boolean) Don't return cluster state metadata (default: false)
      *        ['explain']         = (boolean) Return an explanation of why the commands can or cannot be executed
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
@@ -66,17 +59,15 @@ class ClusterNamespace extends AbstractNamespace
     {
         $body = $this->extractArgument($params, 'body');
 
-
-
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\Reroute $endpoint */
         $endpoint = $endpointBuilder('Cluster\Reroute');
         $endpoint->setBody($body);
         $endpoint->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
+
+        return $this->performRequest($endpoint);
     }
 
     /**
@@ -89,7 +80,7 @@ class ClusterNamespace extends AbstractNamespace
      *        ['local']                  = (boolean) Return local information, do not retrieve the state from master node (default: false)
      *        ['master_timeout']         = (time) Specify timeout for connection to master
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
@@ -98,23 +89,23 @@ class ClusterNamespace extends AbstractNamespace
         $index = $this->extractArgument($params, 'index');
         $metric = $this->extractArgument($params, 'metric');
 
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\State $endpoint */
         $endpoint = $endpointBuilder('Cluster\State');
         $endpoint->setParams($params)
                  ->setIndex($index)
                  ->setMetric($metric);
-        $response = $endpoint->performRequest();
-        return $response['data'];
+
+        return $this->performRequest($endpoint);
     }
 
     /**
      * $params['flat_settings']          = (boolean) Return settings in flat format (default: false)
      *        ['human'] = (boolean) Whether to return time and byte values in human-readable format.
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
@@ -122,22 +113,21 @@ class ClusterNamespace extends AbstractNamespace
     {
         $nodeID = $this->extractArgument($params, 'node_id');
 
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\Stats $endpoint */
         $endpoint = $endpointBuilder('Cluster\Stats');
         $endpoint->setNodeID($nodeID)
                  ->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
-    }
 
+        return $this->performRequest($endpoint);
+    }
 
     /**
      * $params['body'] = ()
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
@@ -145,19 +135,16 @@ class ClusterNamespace extends AbstractNamespace
     {
         $body = $this->extractArgument($params, 'body');
 
-
-
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\Settings\Put $endpoint */
         $endpoint = $endpointBuilder('Cluster\Settings\Put');
         $endpoint->setBody($body);
         $endpoint->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
-    }
 
+        return $this->performRequest($endpoint);
+    }
 
     /**
      * @param array $params
@@ -166,36 +153,73 @@ class ClusterNamespace extends AbstractNamespace
      */
     public function getSettings($params = array())
     {
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\Settings\Put $endpoint */
         $endpoint = $endpointBuilder('Cluster\Settings\Get');
         $endpoint->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
-    }
 
+        return $this->performRequest($endpoint);
+    }
 
     /**
      * $params['local']   = (bool) Return local information, do not retrieve the state from master node (default: false)
      *        ['master_timeout']  = (time) Specify timeout for connection to master
      *
-     * @param $params array Associative array of parameters
+     * @param array $params Associative array of parameters
      *
      * @return array
      */
     public function pendingTasks($params = array())
     {
-
-        /** @var callback $endpointBuilder */
-        $endpointBuilder = $this->dicEndpoints;
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
 
         /** @var \Elasticsearch\Endpoints\Cluster\PendingTasks $endpoint */
         $endpoint = $endpointBuilder('Cluster\PendingTasks');
         $endpoint->setParams($params);
-        $response = $endpoint->performRequest();
-        return $response['data'];
+
+        return $this->performRequest($endpoint);
     }
 
+    /**
+     * $params['include_yes_decisions'] = (bool) Return 'YES' decisions in explanation (default: false)
+     *
+     * @param array $params Associative array of parameters
+     *
+     * @return array
+     */
+    public function allocationExplain($params = array())
+    {
+        $body = $this->extractArgument($params, 'body');
+
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
+
+        /** @var \Elasticsearch\Endpoints\Cluster\AllocationExplain $endpoint */
+        $endpoint = $endpointBuilder('Cluster\AllocationExplain');
+        $endpoint->setBody($body)
+                 ->setParams($params);
+
+        return $this->performRequest($endpoint);
+    }
+
+    /**
+     * $params[]
+     *
+     * @param array $params Associative array of parameters
+     *
+     * @return array
+     */
+    public function remoteInfo($params = array())
+    {
+        /** @var callable $endpointBuilder */
+        $endpointBuilder = $this->endpoints;
+
+        /** @var \Elasticsearch\Endpoints\Cluster\RemoteInfo $endpoint */
+        $endpoint = $endpointBuilder('Cluster\RemoteInfo');
+
+        return $this->performRequest($endpoint);
+    }
 }

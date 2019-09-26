@@ -1,32 +1,26 @@
 <?php
-/**
- * User: zach
- * Date: 5/12/14
- * Time: 10:40 AM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Cat;
 
 use Elasticsearch\Endpoints\AbstractEndpoint;
-use Elasticsearch\Common\Exceptions;
 
 /**
  * Class Fielddata
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints\Cat
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints\Cat
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class Fielddata extends AbstractEndpoint
 {
     private $fields;
 
-
     /**
-     * @param $fields
+     * @param string $fields
      *
      * @return $this
      */
@@ -37,14 +31,14 @@ class Fielddata extends AbstractEndpoint
         }
 
         $this->fields = $fields;
+
         return $this;
     }
-
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         $fields = $this->fields;
         $uri   = "/_cat/fielddata";
@@ -56,11 +50,10 @@ class Fielddata extends AbstractEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'local',
@@ -68,14 +61,15 @@ class Fielddata extends AbstractEndpoint
             'h',
             'help',
             'v',
+            's',
+            'format',
         );
     }
-
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'GET';
     }

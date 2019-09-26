@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 05/31/2013
- * Time: 16:47:11 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Indices\Validate;
 
@@ -12,11 +9,15 @@ use Elasticsearch\Common\Exceptions;
 
 /**
  * Class Query
- * @package Elasticsearch\Endpoints\Indices\Validate
+ *
+ * @category Elasticsearch
+ * @package  Elasticsearch\Endpoints\Indices\Validate
+ * @author   Zachary Tong <zach@elastic.co>
+ * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
+ * @link     http://elastic.co
  */
 class Query extends AbstractEndpoint
 {
-
     /**
      * @param array $body
      *
@@ -29,15 +30,15 @@ class Query extends AbstractEndpoint
             return $this;
         }
 
-
         $this->body = $body;
+
         return $this;
     }
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         return $this->getOptionalURI('_validate/query');
     }
@@ -45,21 +46,27 @@ class Query extends AbstractEndpoint
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'explain',
             'ignore_indices',
             'operation_threading',
             'source',
-            'q'
+            'q',
+            'df',
+            'default_operator',
+            'analyzer',
+            'analyze_wildcard',
+            'lenient',
+            'lowercase_expanded_terms'
         );
     }
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'GET';
     }

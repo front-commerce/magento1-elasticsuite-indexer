@@ -1,26 +1,21 @@
 <?php
-/**
- * User: zach
- * Date: 3/24/14
- * Time: 5:09 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints;
 
 use Elasticsearch\Common\Exceptions\InvalidArgumentException;
-use Elasticsearch\Endpoints\AbstractEndpoint;
 use Elasticsearch\Common\Exceptions;
 
 /**
  * Class SearchTemplate
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class SearchTemplate extends AbstractEndpoint
 {
     /**
@@ -36,15 +31,14 @@ class SearchTemplate extends AbstractEndpoint
         }
 
         $this->body = $body;
+
         return $this;
     }
-
-
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         $index = $this->index;
         $type = $this->type;
@@ -61,21 +55,27 @@ class SearchTemplate extends AbstractEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
-        return array();
+        return array(
+            'ignore_unavailable',
+            'allow_no_indices',
+            'expand_wildcards',
+            'preference',
+            'routing',
+            'scroll',
+            'search_type'
+        );
     }
-
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
-        return 'GET';
+        return isset($this->body) ? 'POST' : 'GET';
     }
 }

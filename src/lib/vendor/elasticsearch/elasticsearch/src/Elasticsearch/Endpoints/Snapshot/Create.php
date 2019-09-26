@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 01/20/2014
- * Time: 14:34:49 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Snapshot;
 
@@ -14,21 +11,26 @@ use Elasticsearch\Common\Exceptions;
  * Class Create
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints\Snapshot
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints\Snapshot
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class Create extends AbstractEndpoint
 {
-    // A repository name
+    /**
+     * A repository name
+     *
+     * @var string
+     */
     private $repository;
 
-
-    // A snapshot name
+    /**
+     * A snapshot name
+     *
+     * @var string
+     */
     private $snapshot;
-
 
     /**
      * @param array $body
@@ -42,15 +44,13 @@ class Create extends AbstractEndpoint
             return $this;
         }
 
-
         $this->body = $body;
+
         return $this;
     }
 
-
-
     /**
-     * @param $repository
+     * @param string $repository
      *
      * @return $this
      */
@@ -61,12 +61,12 @@ class Create extends AbstractEndpoint
         }
 
         $this->repository = $repository;
+
         return $this;
     }
 
-
     /**
-     * @param $snapshot
+     * @param string $snapshot
      *
      * @return $this
      */
@@ -77,15 +77,15 @@ class Create extends AbstractEndpoint
         }
 
         $this->snapshot = $snapshot;
+
         return $this;
     }
-
 
     /**
      * @throws \Elasticsearch\Common\Exceptions\RuntimeException
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         if (isset($this->repository) !== true) {
             throw new Exceptions\RuntimeException(
@@ -108,11 +108,10 @@ class Create extends AbstractEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'master_timeout',
@@ -120,11 +119,10 @@ class Create extends AbstractEndpoint
         );
     }
 
-
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'PUT';
     }

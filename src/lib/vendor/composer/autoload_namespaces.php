@@ -13,7 +13,4 @@ return array(
     'Guzzle\\Parser' => array($vendorDir . '/guzzle/parser'),
     'Guzzle\\Http' => array($vendorDir . '/guzzle/http'),
     'Guzzle\\Common' => array($vendorDir . '/guzzle/common'),
-    'Elasticsearch\\Tests' => array($vendorDir . '/elasticsearch/elasticsearch/tests'),
-    'Elasticsearch\\Benchmarks' => array($vendorDir . '/elasticsearch/elasticsearch/benchmarks'),
-    'Elasticsearch' => array($vendorDir . '/elasticsearch/elasticsearch/src'),
 );

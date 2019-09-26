@@ -38,7 +38,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Category
     protected function _getMappingProperties()
     {
         $mapping = parent::_getMappingProperties(true);
-        $mapping['properties']['path'] = array('type' => 'string');
+        $mapping['properties']['path'] = array('type' => 'keyword');
         return $mapping;
     }
 

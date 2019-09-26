@@ -1,34 +1,30 @@
 <?php
-/**
- * User: zach
- * Date: 05/31/2013
- * Time: 16:47:11 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints;
 
-use Elasticsearch\Endpoints\AbstractEndpoint;
-use Elasticsearch\Common\Exceptions;
 use Elasticsearch\Serializers\SerializerInterface;
 use Elasticsearch\Transport;
 
 /**
  * Class MPercolate
- * @package Elasticsearch\Endpoints
+ *
+ * @category Elasticsearch
+ * @package  Elasticsearch\Endpoints
+ * @author   Zachary Tong <zach@elastic.co>
+ * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
+ * @link     http://elastic.co
  */
 class MPercolate extends AbstractEndpoint implements BulkEndpointInterface
 {
-
     /**
-     * @param Transport           $transport
      * @param SerializerInterface $serializer
      */
-    public function __construct(Transport $transport, SerializerInterface $serializer)
+    public function __construct(SerializerInterface $serializer)
     {
         $this->serializer = $serializer;
-        parent::__construct($transport);
     }
-
 
     /**
      * @param string|array $body
@@ -50,22 +46,22 @@ class MPercolate extends AbstractEndpoint implements BulkEndpointInterface
         }
 
         $this->body = $body;
+
         return $this;
     }
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         return $this->getOptionalURI('_mpercolate');
-
     }
 
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'ignore_unavailable',
@@ -77,7 +73,7 @@ class MPercolate extends AbstractEndpoint implements BulkEndpointInterface
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
         return 'POST';
     }

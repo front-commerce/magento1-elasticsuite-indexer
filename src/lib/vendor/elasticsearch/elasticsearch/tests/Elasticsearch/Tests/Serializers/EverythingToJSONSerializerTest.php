@@ -1,21 +1,18 @@
 <?php
-/**
- * User: zach
- * Date: 6/20/13
- * Time: 9:15 AM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Tests\Serializers;
 
 use Elasticsearch\Serializers\EverythingToJSONSerializer;
-use PHPUnit_Framework_TestCase;
 use Mockery as m;
 
 /**
  * Class EverythingToJSONSerializerTest
+ *
  * @package Elasticsearch\Tests\Serializers
  */
-class EverythingToJSONSerializerTest extends PHPUnit_Framework_TestCase
+class EverythingToJSONSerializerTest extends \PHPUnit\Framework\TestCase
 {
     public function tearDown()
     {
@@ -25,12 +22,12 @@ class EverythingToJSONSerializerTest extends PHPUnit_Framework_TestCase
     public function testSerializeArray()
     {
         $serializer = new EverythingToJSONSerializer();
-        $body = array('value' => 'field');
+        $body = ['value' => 'field'];
 
         $ret = $serializer->serialize($body);
 
-        $body = json_encode($body);
-        $this->assertEquals($body, $ret);
+        $body = json_encode($body, JSON_PRESERVE_ZERO_FRACTION);
+        $this->assertSame($body, $ret);
     }
 
     public function testSerializeString()
@@ -41,7 +38,7 @@ class EverythingToJSONSerializerTest extends PHPUnit_Framework_TestCase
         $ret = $serializer->serialize($body);
 
         $body = '"abc"';
-        $this->assertEquals($body, $ret);
+        $this->assertSame($body, $ret);
     }
 
     public function testDeserializeJSON()
@@ -49,9 +46,9 @@ class EverythingToJSONSerializerTest extends PHPUnit_Framework_TestCase
         $serializer = new EverythingToJSONSerializer();
         $body = '{"field":"value"}';
 
-        $ret = $serializer->deserialize($body, array());
+        $ret = $serializer->deserialize($body, []);
 
         $body = json_decode($body, true);
-        $this->assertEquals($body, $ret);
+        $this->assertSame($body, $ret);
     }
 }

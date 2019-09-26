@@ -1,20 +1,16 @@
 <?php
-/**
- * User: zach
- * Date: 9/18/13
- * Time: 7:36 PM
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\ConnectionPool;
-
 
 use Elasticsearch\Common\Exceptions\Curl\OperationTimeoutException;
 use Elasticsearch\Common\Exceptions\NoNodesAvailableException;
 use Elasticsearch\ConnectionPool\Selectors\SelectorInterface;
-use Elasticsearch\Connections\AbstractConnection;
-use Elasticsearch\Connections\ConnectionFactory;
+use Elasticsearch\Connections\Connection;
+use Elasticsearch\Connections\ConnectionFactoryInterface;
 
-class SniffingConnectionPool extends AbstractConnectionPool
+class SniffingConnectionPool extends AbstractConnectionPool implements ConnectionPoolInterface
 {
     /** @var int  */
     private $sniffingInterval = 300;
@@ -22,7 +18,10 @@ class SniffingConnectionPool extends AbstractConnectionPool
     /** @var  int */
     private $nextSniff = -1;
 
-    public function __construct($connections, SelectorInterface $selector, ConnectionFactory $factory, $connectionPoolParams)
+    /**
+     * {@inheritdoc}
+     */
+    public function __construct($connections, SelectorInterface $selector, ConnectionFactoryInterface $factory, $connectionPoolParams)
     {
         parent::__construct($connections, $selector, $factory, $connectionPoolParams);
 
@@ -30,11 +29,10 @@ class SniffingConnectionPool extends AbstractConnectionPool
         $this->nextSniff = time() + $this->sniffingInterval;
     }
 
-
     /**
      * @param bool $force
      *
-     * @return AbstractConnection
+     * @return Connection
      * @throws \Elasticsearch\Common\Exceptions\NoNodesAvailableException
      */
     public function nextConnection($force = false)
@@ -43,7 +41,7 @@ class SniffingConnectionPool extends AbstractConnectionPool
 
         $size = count($this->connections);
         while ($size--) {
-            /** @var AbstractConnection $connection */
+            /** @var Connection $connection */
             $connection = $this->selector->select($this->connections);
             if ($connection->isAlive() === true || $connection->ping() === true) {
                 return $connection;
@@ -55,15 +53,12 @@ class SniffingConnectionPool extends AbstractConnectionPool
         }
 
         return $this->nextConnection(true);
-
-
     }
 
     public function scheduleCheck()
     {
         $this->nextSniff = -1;
     }
-
 
     /**
      * @param bool $force
@@ -77,7 +72,7 @@ class SniffingConnectionPool extends AbstractConnectionPool
         $total = count($this->connections);
 
         while ($total--) {
-            /** @var AbstractConnection $connection */
+            /** @var Connection $connection */
             $connection = $this->selector->select($this->connections);
 
             if ($connection->isAlive() xor $force) {
@@ -100,12 +95,11 @@ class SniffingConnectionPool extends AbstractConnectionPool
         }
     }
 
-
     /**
-     * @param AbstractConnection $connection
+     * @param Connection $connection
      * @return bool
      */
-    private function sniffConnection(AbstractConnection $connection)
+    private function sniffConnection(Connection $connection)
     {
         try {
             $response = $connection->sniff();
@@ -113,9 +107,7 @@ class SniffingConnectionPool extends AbstractConnectionPool
             return false;
         }
 
-        // TODO wire in the serializer?
-        $nodeInfo = json_decode($response['text'], true);
-        $nodes = $this->parseClusterState($connection->getTransportSchema(), $nodeInfo);
+        $nodes = $this->parseClusterState($connection->getTransportSchema(), $response);
 
         if (count($nodes) === 0) {
             return false;
@@ -132,29 +124,28 @@ class SniffingConnectionPool extends AbstractConnectionPool
         }
 
         $this->nextSniff = time() + $this->sniffingInterval;
+
         return true;
     }
 
-
     private function parseClusterState($transportSchema, $nodeInfo)
     {
-        $pattern       = '/\/([^:]*):([0-9]+)\]/';
+        $pattern       = '/([^:]*):([0-9]+)/';
         $schemaAddress = $transportSchema . '_address';
         $hosts         = array();
 
         foreach ($nodeInfo['nodes'] as $node) {
-            if (isset($node[$schemaAddress]) === true) {
-                if (preg_match($pattern, $node[$schemaAddress], $match) === 1) {
+            if (isset($node['http']) === true && isset($node['http']['publish_address']) === true) {
+                if (preg_match($pattern, $node['http']['publish_address'], $match) === 1) {
                     $hosts[] = array(
                         'host' => $match[1],
-                        'port' => (int)$match[2],
+                        'port' => (int) $match[2],
                     );
                 }
             }
         }
 
         return $hosts;
-
     }
 
     private function setConnectionPoolParams($connectionPoolParams)

@@ -1,9 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 01/20/2014
- * Time: 14:34:49 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints\Indices;
 
@@ -14,12 +11,11 @@ use Elasticsearch\Common\Exceptions;
  * Class Analyze
  *
  * @category Elasticsearch
- * @package Elasticsearch\Endpoints\Indices
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @package  Elasticsearch\Endpoints\Indices
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
-
 class Analyze extends AbstractEndpoint
 {
     /**
@@ -34,17 +30,15 @@ class Analyze extends AbstractEndpoint
             return $this;
         }
 
-
         $this->body = $body;
+
         return $this;
     }
-
-
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         $index = $this->index;
         $uri   = "/_analyze";
@@ -56,30 +50,32 @@ class Analyze extends AbstractEndpoint
         return $uri;
     }
 
-
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'analyzer',
             'field',
-            'filters',
+            'filter',
             'index',
             'prefer_local',
             'text',
             'tokenizer',
             'format',
+            'char_filter',
+            'explain',
+            'attributes',
+            'format'
         );
     }
-
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
-        return 'GET';
+        return isset($this->body) ? 'POST' : 'GET';
     }
 }

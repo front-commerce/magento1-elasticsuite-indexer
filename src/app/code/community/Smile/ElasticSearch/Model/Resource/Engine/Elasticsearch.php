@@ -126,9 +126,13 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
 
         $this->_config = new Varien_Object($config);
 
-        $this->_client = new \Elasticsearch\Client(array('hosts' => $config['hosts'], 'logging' => false));
+        $clientBuilder = \Elasticsearch\ClientBuilder::create();
+        $clientBuilder
+            ->setHosts($config['hosts']);
 
-        if (! isset($config['alias'])) {
+        $this->_client = $clientBuilder->build();
+
+        if (!isset($config['alias'])) {
             Mage::throwException('Alias must be defined for search engine client.');
         }
 

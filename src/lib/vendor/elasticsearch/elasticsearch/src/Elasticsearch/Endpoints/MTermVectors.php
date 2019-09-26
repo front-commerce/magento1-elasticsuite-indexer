@@ -1,22 +1,22 @@
 <?php
-/**
- * User: zach
- * Date: 05/31/2013
- * Time: 16:47:11 pm
- */
+
+declare(strict_types = 1);
 
 namespace Elasticsearch\Endpoints;
 
-use Elasticsearch\Endpoints\AbstractEndpoint;
 use Elasticsearch\Common\Exceptions;
 
 /**
  * Class MTermVectors
- * @package Elasticsearch\Endpoints
+ *
+ * @category Elasticsearch
+ * @package  Elasticsearch\Endpoints
+ * @author   Zachary Tong <zach@elastic.co>
+ * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
+ * @link     http://elastic.co
  */
 class MTermVectors extends AbstractEndpoint
 {
-
     /**
      * @param array $body
      *
@@ -30,22 +30,22 @@ class MTermVectors extends AbstractEndpoint
         }
 
         $this->body = $body;
+
         return $this;
     }
 
     /**
      * @return string
      */
-    protected function getURI()
+    public function getURI()
     {
         return $this->getOptionalURI('_mtermvectors');
-
     }
 
     /**
      * @return string[]
      */
-    protected function getParamWhitelist()
+    public function getParamWhitelist()
     {
         return array(
             'ids',
@@ -57,15 +57,16 @@ class MTermVectors extends AbstractEndpoint
             'payloads',
             'preference',
             'routing',
-            'parent'
+            'parent',
+            'realtime'
         );
     }
 
     /**
      * @return string
      */
-    protected function getMethod()
+    public function getMethod()
     {
-        return 'POST';
+        return isset($this->body) ? 'POST' : 'GET';
     }
 }

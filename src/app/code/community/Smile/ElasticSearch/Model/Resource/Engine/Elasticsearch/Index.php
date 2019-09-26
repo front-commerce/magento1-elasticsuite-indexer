@@ -40,16 +40,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     const DIFF_REINDEX_REFRESH_INTERVAL = '1s';
 
     /**
-     * @var string
-     */
-    const FULL_REINDEX_MERGE_FACTOR = '20';
-
-    /**
-     * @var string
-     */
-    const DIFF_REINDEX_MERGE_FACTOR = '3';
-
-    /**
      * Index name.
      *
      * @var string
@@ -105,8 +95,10 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     {
         $mappingConfig = Mage::getConfig()->getNode(self::MAPPING_CONF_ROOT_NODE)->asArray();
         foreach ($mappingConfig as $type => $config) {
-            $this->_mappings[$type] = Mage::getResourceSingleton($config['model']);
-            $this->_mappings[$type]->setType($type);
+            if ($type === "product") {
+                $this->_mappings[$type] = Mage::getResourceSingleton($config['model']);
+                $this->_mappings[$type]->setType($type);
+            }
         }
     }
 
@@ -173,12 +165,12 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index Self reference
      */
-    public function optimize()
+    public function forceMerge()
     {
         $indices = $this->getClient()->indices();
         $params  = array('index' => $this->getCurrentName());
         if ($indices->exists($params)) {
-            $indices->optimize($params);
+            $indices->forceMerge($params);
         }
         return $this;
     }
@@ -193,7 +185,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
         $indexSettings = array(
             'number_of_replicas'               => 0,
             "refresh_interval"                 => self::FULL_REINDEX_REFRESH_INTERVAL,
-            "merge.policy.merge_factor"        => self::FULL_REINDEX_MERGE_FACTOR,
             "merge.scheduler.max_thread_count" => 1
         );
 
@@ -350,6 +341,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
 
                 $mapping = $params;
                 foreach ($this->_mappings as $type => $mappingModel) {
+                    // TODO Create different indexes, since indexes cannot contain several types anymore since 6.0
                     $mapping['body']['mappings'][$type] = $mappingModel->getMappingProperties(false);
                 }
 
@@ -466,7 +458,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
         }
 
         if ($this->_indexNeedInstall) {
-            $this->optimize();
+            $this->forceMerge();
             Mage::dispatchEvent('smile_elasticsearch_index_install_before', array('index_name' => $this->getCurrentName()));
 
             $indices = $this->getClient()->indices();
@@ -477,7 +469,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                     'body'  => array(
                         'number_of_replicas'        => (int) $this->getConfig('number_of_replicas'),
                         "refresh_interval"          => self::DIFF_REINDEX_REFRESH_INTERVAL,
-                        "merge.policy.merge_factor" => self::DIFF_REINDEX_MERGE_FACTOR,
                     )
                 )
             );
@@ -589,7 +580,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                 'type'   => $type,
                 'size'   => self::COPY_DATA_BULK_SIZE,
                 'scroll' => '5m',
-                'search_type' => 'scan'
             );
 
             $scroll = $this->getClient()->search($scrollQuery);

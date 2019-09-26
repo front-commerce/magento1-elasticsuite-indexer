@@ -1,10 +1,6 @@
 <?php
-/**
- * User: zach
- * Date: 7/23/13
- * Time: 5:05 PM
- */
 
+declare(strict_types = 1);
 
 namespace Elasticsearch\Common\Exceptions;
 
@@ -13,9 +9,9 @@ namespace Elasticsearch\Common\Exceptions;
  *
  * @category Elasticsearch
  * @package  Elasticsearch\Common\Exceptions
- * @author   Zachary Tong <zachary.tong@elasticsearch.com>
+ * @author   Zachary Tong <zach@elastic.co>
  * @license  http://www.apache.org/licenses/LICENSE-2.0 Apache2
- * @link     http://elasticsearch.org
+ * @link     http://elastic.co
  */
 class NoDocumentsToGetException extends ServerErrorResponseException implements ElasticsearchException
 {
