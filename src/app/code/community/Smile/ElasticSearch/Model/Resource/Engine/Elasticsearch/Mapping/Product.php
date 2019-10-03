@@ -70,6 +70,18 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
             $mapping['properties'] = array_merge($mapping['properties'], $fieldMapping);
         }
 
+        $mapping['properties']['category'] = array(
+            'type' => 'nested',
+            'properties' => array_merge(
+                $this->_getStringMapping('category_name', $languageCode, 'text', true, true, true),
+                array(
+                    'category_id' => array('type' => 'long'),
+                    'position' => array('type' => 'long'),
+                    'is_virtual' => array('type' => 'boolean'),
+                )
+            )
+        );
+
         $mapping['properties']['category_position'] = array(
             'type' => 'nested',
             'properties' => array(

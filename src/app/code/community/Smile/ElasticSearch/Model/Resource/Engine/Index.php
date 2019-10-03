@@ -171,6 +171,10 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
             $result[$productId]['categories'][] = $categoryId;
             $result[$productId]['category_position'][] = array('category_id' => $categoryId, 'position' => (int) $row['position']);
 
+            $result[$productId]['category'][] = array(
+                'category_id' => $categoryId
+            );
+
             // Filling the "show_in_categories" field from the path
             // Possible since all categories are have is_anchor set to true
             $parentCategories = explode('/', $row['path']);
