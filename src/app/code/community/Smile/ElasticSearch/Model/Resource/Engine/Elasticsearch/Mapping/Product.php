@@ -66,7 +66,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
 
         foreach ($this->_stores as $store) {
             $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
-            $fieldMapping = $this->_getStringMapping('category_name_' . $languageCode, $languageCode, 'text', true, true, true);
+            $fieldMapping = $this->_getStringMapping('category_name', $languageCode, 'text', true, true, true);
             $mapping['properties'] = array_merge($mapping['properties'], $fieldMapping);
         }
 
@@ -199,16 +199,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     {
         $index = Mage::getResourceSingleton('smile_elasticsearch/engine_index');
         $entityIndexes = $index->addAdvancedIndex($entityIndexes, $storeId);
-        $store = Mage::app()->getStore($storeId);
-        $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
-
-        foreach ($entityIndexes as &$entityData) {
-            if (isset($entityData['category_name'])) {
-                $entityData['category_name_' . $languageCode] = $entityData['category_name'];
-                unset($entityData['category_name']);
-            }
-        }
-
         return $entityIndexes;
     }
 

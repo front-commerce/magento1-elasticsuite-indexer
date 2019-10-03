@@ -121,16 +121,15 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
                 $websiteIds = $data['catalogsearch_website_ids'];
                 $actionType = $data['catalogsearch_action_type'];
 
-                foreach ($websiteIds as $websiteId) {
-                    foreach (Mage::app()->getWebsite($websiteId)->getStoreIds() as $storeId) {
-                        if ($actionType == 'remove') {
-                            $this->_getIndexer()
-                                ->cleanIndex($storeId, $productIds)
-                                ->resetSearchResults();
-                        } else if ($actionType == 'add') {
-                            $this->_getMapping('product')->rebuildIndex($storeId, $productIds);
-                            $this->_getIndexer()->resetSearchResults();
-                        }
+                $storeIds = Mage::helper('smile_elasticsearch')->getIndexedStoreIdsFromWebsiteIds($websiteIds);
+                foreach ($storeIds as $storeId) {
+                    if ($actionType == 'remove') {
+                        $this->_getIndexer()
+                            ->cleanIndex($storeId, $productIds)
+                            ->resetSearchResults();
+                    } else if ($actionType == 'add') {
+                        $this->_getMapping('product')->rebuildIndex($storeId, $productIds);
+                        $this->_getIndexer()->resetSearchResults();
                     }
                 }
             }

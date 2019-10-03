@@ -54,7 +54,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
     public function updateAllData($storeId = null, $entityIds = null)
     {
         if ($storeId == null) {
-            $stores = Mage::app()->getStores();
+            $stores = Mage::helper('smile_elasticsearch')->getIndexedStores();
             foreach ($stores as $store) {
                 $this->updateAllData($store->getId(), $entityIds);
             }
@@ -117,7 +117,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
                 $data = $this->getClient()->scroll($scroller);
                 $indexDocumentCount += $data['hits']['total'];
                 foreach ($data['hits']['hits'] as $currentDoc) {
-                    $entityIds[] = current(explode('|', $currentDoc['_id']));
+                    $entityIds[] = $currentDoc['_id'];
                 }
                 if (!empty($entityIds)) {
                     $this->_updateEntities($storeId, $entityIds);
@@ -140,8 +140,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
         $updateData = $this->getEntitiesData($storeId, $entityIds);
         $bulk = array();
         foreach ($updateData as $entityId => $data) {
-            $documentId = sprintf("%s|%s", $entityId, $storeId);
-            $update = $this->getCurrentIndex()->updateDocument($documentId, $data, $this->_mapping->getType());
+            $update = $this->getCurrentIndex()->updateDocument($entityId, $data, $this->_mapping->getType());
             $bulk = array_merge($bulk, $update);
         }
 

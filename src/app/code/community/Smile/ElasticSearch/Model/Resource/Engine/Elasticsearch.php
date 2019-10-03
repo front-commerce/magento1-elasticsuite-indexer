@@ -190,7 +190,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         }
 
         if (is_null($storeId)) {
-            $storeId = array_keys(Mage::app()->getStores());
+            $storeId = Mage::helper('smile_elasticsearch')->getIndexedStoreIds(
+                array_keys(Mage::app()->getStores())
+            );
         } else if (!is_array($storeId)) {
             $storeId = array($storeId);
         }
@@ -203,7 +205,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
                     'delete' => array(
                         '_index' => $this->getCurrentIndex()->getCurrentName(),
                         '_type'  => $type,
-                        '_id'    => $currentId . '|' .$currentStoreId
+                        '_id'    => $currentId
                     )
                 );
             }
