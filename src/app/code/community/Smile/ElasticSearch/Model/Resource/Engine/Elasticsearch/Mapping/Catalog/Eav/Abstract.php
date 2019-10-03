@@ -102,7 +102,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
             if ($type === 'text' && !$attribute->getBackendModel() && $attribute->getFrontendInput() != 'media_image') {
                 foreach ($this->_stores as $store) {
                     $languageCode = $this->_helper->getLanguageCodeByStore($store);
-                    $fieldName = $attributeCode . '_' . $languageCode;
+                    $fieldName = $attributeCode;
                     $mapping[$fieldName] = array('type' => $type, 'analyzer' => 'analyzer_' . $languageCode, 'store' => false);
 
                     $multiTypeField = $attribute->getBackendType() == 'varchar' || $attribute->getBackendType() == 'text';
@@ -130,7 +130,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
             if ($attribute->usesSource()) {
                 foreach ($this->_stores as $store) {
                     $languageCode = $this->_helper->getLanguageCodeByStore($store);
-                    $fieldName = 'options' . '_' .  $attributeCode . '_' . $languageCode;
+                    $fieldName = 'options' . '_' .  $attributeCode;
                     $fieldMapping = $this->_getStringMapping(
                         $fieldName, $languageCode, 'text', $usedForSortBy, $isFuzzy, $isFacet, $isAutocomplete, $isSearchable
                     );
@@ -305,7 +305,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                     }
 
                     $entityData['store_id'] = $storeId;
-                    $entityData[Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch::UNIQUE_KEY] = $entityData['entity_id'] . '|' . $storeId;
+                    $entityData[Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch::UNIQUE_KEY] = $entityData['entity_id'];
                     $entityIndexes[$entityData['entity_id']] = $entityData;
                 }
 
@@ -339,7 +339,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                     $attrs[$field] = $storedValue;
 
                     if ($attribute->usesSource()) {
-                        $field = 'options_' . $attribute->getAttributeCode() . '_' . $languageCode;
+                        $field = 'options_' . $attribute->getAttributeCode();
                         $optionValue = $this->_getOptionsText($attribute, $storedValue, $storeId);
                         if ($optionValue) {
                             $attrs[$field] = $optionValue;
@@ -546,11 +546,6 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
         $mapping = $mapping['properties'];
 
         $fieldName = $attribute->getAttributeCode();
-
-        if (!isset($mapping[$fieldName])) {
-            $fieldName =  $fieldName . '_' . $languageCode;
-        }
-
         if (!isset($mapping[$fieldName])) {
             $fieldName = false;
         }

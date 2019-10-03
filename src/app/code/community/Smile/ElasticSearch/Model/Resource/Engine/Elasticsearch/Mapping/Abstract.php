@@ -98,8 +98,8 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
      */
     public function __construct()
     {
-        $this->_stores = Mage::app()->getStores();
         $this->_helper = Mage::helper('smile_elasticsearch');
+        $this->_stores = $this->_helper->getIndexedStores();
     }
 
     /**
@@ -240,7 +240,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
             $defaultAnalyzer = 'analyzer_' . $languageCode;
             $baseFieldProperties = array('type' => 'text', 'store' => false);
             foreach (array('search', 'spelling', 'autocomplete') as $currentField) {
-                $currentIndexField = sprintf('%s_%s', $currentField, $languageCode);
+                $currentIndexField = $currentField;
                 $mapping[$currentIndexField] = $baseFieldProperties;
                 $mapping[$currentIndexField]['analyzer'] = $defaultAnalyzer;
                 $mapping[$currentIndexField]['fields'] = array(
@@ -307,7 +307,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
             }
 
             if ($autocomplete == true) {
-                $mapping[$fieldName]['copy_to'][] = 'autocomplete_' . $languageCode;
+                $mapping[$fieldName]['copy_to'][] = 'autocomplete';
             }
         }
 
@@ -316,7 +316,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         }
 
         if ($fuzzy == true) {
-            $mapping[$fieldName]['copy_to'][] = 'spelling_' . $languageCode;
+            $mapping[$fieldName]['copy_to'][] = 'spelling';
         }
 
         if ($this->getCurrentIndex()->isPhoneticSupported($languageCode)) {
@@ -332,7 +332,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         }
 
         if ($searchable) {
-            $mapping[$fieldName]['copy_to'][] = 'search_' . $languageCode;
+            $mapping[$fieldName]['copy_to'][] = 'search';
         }
 
         return $mapping;
