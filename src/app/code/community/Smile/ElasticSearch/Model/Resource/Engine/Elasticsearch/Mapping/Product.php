@@ -60,21 +60,23 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     protected function _getMappingProperties()
     {
         $mapping = parent::_getMappingProperties(true);
-        $mapping['properties']['categories'] = array('type' => 'long');
-        $mapping['properties']['show_in_categories'] = array('type' => 'long');
         $mapping['properties']['in_stock']   = array('type' => 'boolean');
 
+        // TODO simplify this hack when only a single store will be indexed.
+        // see https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7
         foreach ($this->_stores as $store) {
             $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
-            $fieldMapping = $this->_getStringMapping('category_name', $languageCode, 'text', true, true, true);
-            $mapping['properties'] = array_merge($mapping['properties'], $fieldMapping);
         }
 
-        $mapping['properties']['category_position'] = array(
+        $mapping['properties']['category'] = array(
             'type' => 'nested',
-            'properties' => array(
-                'category_id' => array('type' => 'long'),
-                'position'    => array('type' => 'long')
+            'properties' => array_merge(
+                $this->_getStringMapping('category_name', $languageCode, 'text', true, true, true),
+                array(
+                    'category_id' => array('type' => 'long'),
+                    'position' => array('type' => 'long'),
+                    'is_virtual' => array('type' => 'boolean'),
+                )
             )
         );
 

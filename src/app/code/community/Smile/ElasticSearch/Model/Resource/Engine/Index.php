@@ -167,9 +167,10 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
             $productId  = (int) $row['product_id'];
             $categoryId = (int) $row['category_id'];
 
-            // All categories are now parent category => can be added into 'categories' without particular check
-            $result[$productId]['categories'][] = $categoryId;
-            $result[$productId]['category_position'][] = array('category_id' => $categoryId, 'position' => (int) $row['position']);
+            $result[$productId]['category'][] = array(
+                'category_id' => $categoryId,
+                'position' => (int) $row['position'],
+            );
 
             // Filling the "show_in_categories" field from the path
             // Possible since all categories are have is_anchor set to true
@@ -187,13 +188,35 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
             $loadedCategoryIds = array_merge($loadedCategoryIds, $showInCategories);
         }
 
+        // Add additional categories from `show_in_categories` to the indexed categories
+        $result = array_map(function($product) {
+            $categoriesNotInData = array_diff(
+                array_map('intval', $product['show_in_categories']),
+                array_map(function ($category) { return $category['category_id']; }, $product['category'])
+            );
+
+            foreach ($categoriesNotInData as $categoryId) {
+                $product['category'][] = array(
+                    'category_id' => $categoryId,
+                    'position' => 0
+                );
+            }
+
+            unset($product['show_in_categories']);
+            return $product;
+        }, $result);
+
         // Append new categories into the cache of names
         $storeCategoryName = array_filter($this->_loadCategoryNames(array_unique($loadedCategoryIds), $storeId));
 
         foreach ($result as &$categoriesData) {
-            // Fill the category_name field from the cache of names
-            $categoryIdsAsKeys = array_fill_keys($categoriesData['show_in_categories'], 1);
-            $categoriesData['category_name'] = array_values(array_intersect_key($storeCategoryName, $categoryIdsAsKeys));
+            // Fill the category.name field from the cache of names
+            $categoriesData['category'] = array_map(function ($category) use ($storeCategoryName) {
+                $id = $category['category_id'];
+                return array_merge($category, array(
+                    'name' => array_key_exists($id, $storeCategoryName) ? $storeCategoryName[$id] : ""
+                ));
+            }, $categoriesData['category']);
         }
 
         return $result;
@@ -209,9 +232,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
      */
     protected function _getCategoryProductIndexData($productIds, $storeId)
     {
-
-        $rootCategoryId = (int) Mage::app()->getStore($storeId)->getRootCategoryId();
-
         $adapter = $this->_getWriteAdapter();
         $select = $this->_getWriteAdapter()->select()
             ->from(array('cat' => $this->getTable('catalog/category_product_index')))
