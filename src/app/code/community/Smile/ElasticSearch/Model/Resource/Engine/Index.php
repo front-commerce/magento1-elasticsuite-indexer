@@ -341,6 +341,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
                         'entity_id',
                         'customer_group_id',
                         'website_id',
+                        'price',
                         'min_price',
                         'has_discount' => new Zend_Db_Expr('COALESCE((price - min_price) > 0, 0)')
                     )
@@ -353,11 +354,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
             foreach ($adapter->fetchAll($select) as $row) {
                 $productId = (int) $row['entity_id'];
 
-                $priceKey = sprintf('price_%s_%s', $row['customer_group_id'], $row['website_id']);
-                $result[$productId][$priceKey] = round($row['min_price'], 2);
-
-                $discountKey = sprintf('has_discount_%s_%s', $row['customer_group_id'], $row['website_id']);
-                $result[$productId][$discountKey] = (bool) $row['has_discount'];
+                if (empty($result[$productId]['price'])) {
+                    $result[$productId]['price'] = array();
+                }
+                $result[$productId]['price'][] = array(
+                    'price' => round($row['min_price'], 2),
+                    'original_price' => round($row['price'], 2),
+                    'is_discount' => (bool) $row['has_discount'],
+                    'customer_group_id' => $row['customer_group_id']
+                );
             }
         }
 
