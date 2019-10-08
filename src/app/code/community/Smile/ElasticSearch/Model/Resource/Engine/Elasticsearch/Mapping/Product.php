@@ -80,16 +80,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
             )
         );
 
-        // Append dynamic mapping for product prices and discount fields
-        $fieldTemplate = array(
-            'match' => 'price_*', 'mapping' => array('type' => 'double')
+        $mapping['properties']['price'] = array(
+            'type' => 'nested',
+            'properties' => array(
+                'price' => array('type' => 'double'),
+                'original_price' => array('type' => 'double'),
+                'is_discount' => array('type' => 'boolean'),
+                'customer_group_id' => array('type' => 'integer'),
+            )
         );
-        $mapping['dynamic_templates'][] = array('prices' => $fieldTemplate);
-
-        $fieldTemplate = array(
-            'match' => 'has_discount_*', 'mapping' => array('type' => 'boolean')
-        );
-        $mapping['dynamic_templates'][] = array('has_discount' => $fieldTemplate);
 
         $mappingObject = new Varien_Object($mapping);
         Mage::dispatchEvent('search_engine_product_mapping_properties', array('mapping' => $mappingObject));
