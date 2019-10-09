@@ -299,8 +299,10 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                     $entityTypeId = isset($entityData['type_id']) ? $entityData['type_id'] : null;
                     $this->_addChildrenData($entityData['entity_id'], $entityAttributes, $entityRelations, $storeId, $entityTypeId);
 
+                    $entityData['indexed_attributes'] = [];
                     foreach ($entityAttributes[$entityData['entity_id']] as $attributeId => $value) {
                         $attribute = $attributesById[$attributeId];
+                        $entityData['indexed_attributes'][] = $attribute->getAttributeCode();
                         $entityData += $this->_getAttributeIndexValues($attribute, $value, $storeId, $languageCode);
                     }
 
