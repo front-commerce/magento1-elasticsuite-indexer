@@ -80,6 +80,8 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
             )
         );
 
+        $mapping['properties']['indexed_attributes'] = array('type' => 'keyword');
+
         $mapping['properties']['price'] = array(
             'type' => 'nested',
             'properties' => array(
