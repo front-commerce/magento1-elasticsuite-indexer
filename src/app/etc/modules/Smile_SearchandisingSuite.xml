@@ -49,7 +49,7 @@
         </Smile_ElasticSearch>
 
         <Smile_VirtualCategories>
-            <active>true</active>
+            <active>false</active>
             <codePool>community</codePool>
             <depends>
                 <Smile_ElasticSearch />
@@ -57,7 +57,7 @@
         </Smile_VirtualCategories>
 
         <Smile_SearchOptimizer>
-            <active>true</active>
+            <active>false</active>
             <codePool>community</codePool>
             <depends>
                 <Smile_VirtualCategories />
@@ -65,7 +65,7 @@
         </Smile_SearchOptimizer>
 
         <Smile_VirtualAttributes>
-            <active>true</active>
+            <active>false</active>
             <codePool>community</codePool>
             <depends>
                 <Smile_VirtualCategories />
