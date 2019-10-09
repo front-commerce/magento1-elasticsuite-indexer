@@ -361,7 +361,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
                     'price' => round($row['min_price'], 2),
                     'original_price' => round($row['price'], 2),
                     'is_discount' => (bool) $row['has_discount'],
-                    'customer_group_id' => $row['customer_group_id']
+                    'customer_group_id' => (int) $row['customer_group_id']
                 );
             }
         }
