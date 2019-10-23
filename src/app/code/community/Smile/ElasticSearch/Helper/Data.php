@@ -22,7 +22,7 @@ class Smile_ElasticSearch_Helper_Data extends Mage_Core_Helper_Abstract
      * Temporary feature flag to disable multi-store indexation in a single index
      * while https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7 is not implemented
      */
-    const FEATURE_MULTI_STORE_ENABLED = false;
+    const FEATURE_MULTI_STORE_ENABLED = true;
 
     /**
      * Allowed languages.
@@ -32,34 +32,37 @@ class Smile_ElasticSearch_Helper_Data extends Mage_Core_Helper_Abstract
      */
     protected $_languageCodes = array();
 
-    public function getIndexedStores()
+    public function getIndexScopes()
+    {
+        return array_values(array_map(
+            ['Smile_ElasticSearch_Model_Scope', 'fromMagentoStore'],
+            $this->getIndexedStores())
+        );
+    }
+
+    private function getIndexedStores()
     {
         $stores = Mage::app()->getStores();
         if (static::FEATURE_MULTI_STORE_ENABLED) {
-            throw new LogicException('Multi-store is not available yet. See https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7');
+            return $stores;
         }
+
         $firstKey = array_shift(array_keys($stores));
         return [
             $firstKey => $stores[$firstKey]
         ];
     }
 
-    public function getIndexedStoreIds($ids)
-    {
-        if (static::FEATURE_MULTI_STORE_ENABLED) {
-            throw new LogicException('Multi-store is not available yet. See https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7');
-        }
-        return [array_shift($ids)];
-    }
-
     public function getIndexedStoreIdsFromWebsiteIds($ids)
     {
         if (static::FEATURE_MULTI_STORE_ENABLED) {
+            // TODO Get rid of usages of this method
             throw new LogicException('Multi-store is not available yet. See https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7');
         }
 
         $websiteId = current($ids);
-        return $this->getIndexedStoreIds(Mage::app()->getWebsite($websiteId)->getStoreIds());
+        $storeIds = Mage::app()->getWebsite($websiteId)->getStoreIds();
+        return [array_shift($storeIds)];
     }
 
     /**

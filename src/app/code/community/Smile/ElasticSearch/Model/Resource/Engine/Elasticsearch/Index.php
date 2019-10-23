@@ -47,7 +47,14 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     protected $_name;
 
     /**
+     * @var string
+     */
+    protected $_baseIndexName;
+
+    /**
      * Types mappings.
+     *
+     * @deprecated Index now has only one mapping
      *
      * @var array
      */
@@ -89,6 +96,16 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     );
 
     /**
+     * @var Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
+     */
+    protected $_mapping;
+
+    /**
+     * @var Smile_ElasticSearch_Model_Scope $scope
+     */
+    protected $_scope;
+
+    /**
      * Init mappings while the index is init
      */
     public function __construct()
@@ -100,6 +117,19 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                 $this->_mappings[$type]->setType($type);
             }
         }
+    }
+
+    /**
+     * Set base index name, to allow generating unique names.
+     *
+     * @param string $indexName Base name of the index.
+     *
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
+     */
+    public function setBaseName($indexName)
+    {
+        $this->_baseIndexName = $indexName;
+        return $this;
     }
 
     /**
@@ -212,13 +242,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
             $analyzer['char_filter'] = isset($analyzer['char_filter']) ? explode(',', $analyzer['char_filter']) : array();
         }
 
-        /** @var $helper Smile_ElasticSearch_Helper_Data */
-        $helper = $this->_getHelper();
-        foreach (Mage::app()->getStores() as $store) {
-            /** @var $store Mage_Core_Model_Store */
-            $languageCode = $helper->getLanguageCodeByStore($store);
-            $indexSettings = $this->_addLanguageAnalyzerToSettings($indexSettings, $languageCode, $availableFilters);
-        }
+        $indexSettings = $this->_addLanguageAnalyzerToSettings($indexSettings, $this->_scope->getLanguageCode(), $availableFilters);
 
         if ($this->isIcuFoldingEnabled()) {
             foreach ($indexSettings['analysis']['analyzer'] as &$analyzer) {
@@ -244,7 +268,8 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     {
         $lang = strtolower(Zend_Locale_Data::getContent('en', 'language', $languageCode));
 
-        $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode] = array(
+        $analyzerName = $this->analyzerName($languageCode);
+        $indexSettings['analysis']['analyzer'][$analyzerName] = array(
             'type' => 'custom',
             'tokenizer' => 'whitespace',
             'filter' => array( 'word_delimiter', 'length', 'lowercase', 'ascii_folding', 'synonym'),
@@ -253,15 +278,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
 
         if (isset($indexSettings['analysis']['language_filters'][$lang])) {
             $additionalFilters = explode(',', $indexSettings['analysis']['language_filters'][$lang]);
-            $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode]['filter'] = array_merge(
-                $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode]['filter'],
+            $indexSettings['analysis']['analyzer'][$analyzerName]['filter'] = array_merge(
+                $indexSettings['analysis']['analyzer'][$analyzerName]['filter'],
                 $additionalFilters
             );
         }
 
-        $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode]['filter'] = array_values(
+        $indexSettings['analysis']['analyzer'][$analyzerName]['filter'] = array_values(
             array_intersect(
-                $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode]['filter'],
+                $indexSettings['analysis']['analyzer'][$analyzerName]['filter'],
                 $availableFilters
             )
         );
@@ -274,14 +299,14 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
             $indexSettings['analysis']['filter']['snowball_' . $languageCode] = array(
                 'type' => 'stemmer', 'language' => $languageStemmer
             );
-            $indexSettings['analysis']['analyzer']['analyzer_' . $languageCode]['filter'][] = 'snowball_' . $languageCode;
+            $indexSettings['analysis']['analyzer'][$analyzerName]['filter'][] = 'snowball_' . $languageCode;
         }
 
         if (in_array($lang, $this->_beiderMorseLanguages)) {
             $indexSettings['analysis']['filter']['beidermorse_' . $languageCode] = array(
                 'type' => 'phonetic', 'encoder' => 'beider_morse', 'languageset' => $lang
             );
-            $indexSettings['analysis']['analyzer']['phonetic_' . $languageCode] = array(
+            $indexSettings['analysis']['analyzer'][$this->phoneticAnalyzerName($languageCode)] = array(
                 'type' => 'custom', 'tokenizer' => 'standard', 'char_filter' => 'html_strip',
                 'filter' => array(
                     "standard", "ascii_folding", "lowercase", "stemmer", "beidermorse_" . $languageCode
@@ -295,13 +320,18 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     /**
      * Return a mapping used to index entities.
      *
-     * @param string $type Retrieve mapping for a type (product, category, ...).
+     * @param string $type Retrieve mapping for a type (product, category, ...). @deprecated
      *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
      */
-    public function getMapping($type)
+    public function getMapping($type = null)
     {
-        return $this->_mappings[$type];
+        return $this->_mapping;
+    }
+
+    public function setMapping(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract $mapping)
+    {
+        $this->_mapping = $mapping;
     }
 
     /**
@@ -331,6 +361,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
             $indices = $this->getClient()->indices();
             $params = array('index' => $this->getCurrentName());
 
+            $indexedDataType = $this->getMapping()->getType();
             if ($indices->exists($params)) {
 
                 $indices->close($params);
@@ -340,21 +371,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                 $indices->putSettings($settingsParams);
 
                 $mapping = $params;
-                foreach ($this->_mappings as $type => $mappingModel) {
-                    // TODO Create different indexes, since indexes cannot contain several types anymore since 6.0
-                    $mapping['body']['mappings'][$type] = $mappingModel->getMappingProperties(false);
-                }
-
+                $mapping['body']['mappings'][$indexedDataType] = $this->getMapping()->getMappingProperties($this, false);
                 $indices->putMapping($mapping);
 
                 $indices->open();
             } else {
                 $params['body']['settings'] = $indexSettings;
                 $params['body']['settings']['number_of_shards'] = (int) $this->getConfig('number_of_shards');
-                foreach ($this->_mappings as $type => $mappingModel) {
-                    $mappingModel->setType($type);
-                    $params['body']['mappings'][$type] = $mappingModel->getMappingProperties(false);
-                }
+                $params['body']['mappings'][$indexedDataType] = $this->getMapping()->getMappingProperties($this, false);
+
                 $properties = new Varien_Object($params);
                 Mage::dispatchEvent('smile_elasticsearch_index_create_before', array('index_properties' => $properties ));
                 $indices->create($properties->getData());
@@ -371,13 +396,13 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     /**
      * Indicates if the phonetic machine is enabled for the current locale
      *
-     * @param string $languageCode Language code.
+     * @param string $languageCode Language code. @deprecated
      *
      * @return boolean
      */
-    public function isPhoneticSupported($languageCode)
+    public function isPhoneticSupported()
     {
-        $lang = strtolower(Zend_Locale_Data::getContent('en', 'language', $languageCode));
+        $lang = strtolower(Zend_Locale_Data::getContent('en', 'language', $this->_scope->getLanguageCode()));
         return in_array($lang, $this->_beiderMorseLanguages);
     }
 
@@ -429,9 +454,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
         $config = $helper->getEngineConfigData();
 
         // Compute index name
-        $indexName = $helper->getHorodatedName($config['alias']);
+        $indexName = $helper->getHorodatedName($this->_baseIndexName);
         if (isset($config['indices_pattern'])) {
-            $indexName = $helper->getHorodatedName($config['alias'], $config['indices_pattern']);
+            $indexName = $helper->getHorodatedName($this->_baseIndexName, $config['indices_pattern']);
         }
         // Set the new index name
         $this->setCurrentName($indexName);
@@ -446,23 +471,16 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     /**
      * Install the new index after full reindex
      *
-     * @param string $indexName Index to be installed current index if not set.
-     *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Adapter
      */
-    public function installNewIndex($indexName = null)
+    public function installNewIndex()
     {
-        if ($indexName !== null && $indexName != $this->getCurrentName()) {
-            $this->setCurrentName($indexName);
-            $this->_indexNeedInstall = true;
-        }
-
         if ($this->_indexNeedInstall) {
             $this->forceMerge();
             Mage::dispatchEvent('smile_elasticsearch_index_install_before', array('index_name' => $this->getCurrentName()));
 
             $indices = $this->getClient()->indices();
-            $alias = $this->getConfig('alias');
+            $alias = $this->_baseIndexName;
             $indices->putSettings(
                 array(
                     'index' => $this->getCurrentName(),
@@ -521,17 +539,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     /**
      * Create document to index.
      *
-     * @param string $id   Document Id
-     * @param array  $data Data indexed
-     * @param string $type Document type
-     *
-     * @return string Json representation of the bulk document
+     * @param string $id Document Id
+     * @param array $data Data indexed
+     * @return array Json representation of the bulk document
      */
-    public function createDocument($id, array $data = array(), $type = 'product')
+    public function createDocument($id, array $data = array())
     {
         $headerData = array(
             '_index'   => $this->getCurrentName(),
-            '_type'    => $type,
+            '_type'    => $this->getMapping()->getType(),
             '_id'      => $id,
             '_routing' => $id,
         );
@@ -658,5 +674,77 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
         }
 
         return $this;
+    }
+
+    /**
+     * @param Smile_ElasticSearch_Model_Scope $scope
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
+     */
+    public function setScope(Smile_ElasticSearch_Model_Scope $scope)
+    {
+        $this->_scope = $scope;
+        return $this;
+    }
+
+    /**
+     * @param $languageCode
+     * @return string
+     */
+    private function analyzerName($languageCode)
+    {
+        return 'analyzer_' . $languageCode;
+    }
+
+    /**
+     * @return string
+     */
+    public function getLanguageAnalyzerName()
+    {
+        return $this->analyzerName($this->_scope->getLanguageCode());
+    }
+
+    /**
+     * @param $languageCode
+     * @return string
+     */
+    private function phoneticAnalyzerName($languageCode)
+    {
+        return 'phonetic_' . $languageCode;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPhoneticAnalyzerName()
+    {
+        return $this->phoneticAnalyzerName($this->_scope->getLanguageCode());
+    }
+
+    /**
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
+     */
+    public function rebuildIndex() // TODO $ids = null
+    {
+        $this->getMapping()->rebuildIndex($this);
+        $this->refresh();
+    }
+
+    /**
+     * @return Smile_ElasticSearch_Model_Scope
+     */
+    public function getScope()
+    {
+        return $this->_scope;
+    }
+
+    /**
+     * Wether the index contains data of the given type or not
+     *
+     * @param $type
+     * @return boolean
+     */
+    public function isForType($type)
+    {
+        return $type === $this->getMapping()->getType();
     }
 }

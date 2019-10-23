@@ -187,12 +187,22 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
      */
     public function reindexAll()
     {
-        $index = $this->getCurrentIndex();
+        $indexes = $this->getAllIndexes();
 
-        $index->prepareNewIndex();
-        foreach ($index->getAllMappings() as $mapping) {
-            $mapping->rebuildIndex();
+        foreach ($indexes as $index) {
+            $index->prepareNewIndex();
+            $index->rebuildIndex();
+            $index->installNewIndex();
         }
-        $index->installNewIndex();
+    }
+
+    /**
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index[]
+     */
+    public function getAllIndexes()
+    {
+        return Mage::helper('catalogsearch')->getEngine()->getCurrentIndexesForScopes(
+            Mage::helper('smile_elasticsearch')->getIndexScopes()
+        );
     }
 }

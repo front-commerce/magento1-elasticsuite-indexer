@@ -53,16 +53,18 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
      */
     public function updateAllData($storeId = null, $entityIds = null)
     {
-        if ($storeId == null) {
-            $stores = Mage::helper('smile_elasticsearch')->getIndexedStores();
-            foreach ($stores as $store) {
-                $this->updateAllData($store->getId(), $entityIds);
-            }
-        } else if ($entityIds == null) {
-            $this->_updateStoreEntities($storeId);
-        } else {
-            $this->_updateEntities($storeId, $entityIds);
-        }
+        // TODO Implement it
+        throw new LogicException('Not implemented yet (\Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_DataProvider_Abstract::updateAllData)');
+//        if ($storeId == null) {
+//            $stores = Mage::helper('smile_elasticsearch')->getIndexedStores();
+//            foreach ($stores as $store) {
+//                $this->updateAllData($store->getId(), $entityIds);
+//            }
+//        } else if ($entityIds == null) {
+//            $this->_updateStoreEntities($storeId);
+//        } else {
+//            $this->_updateEntities($storeId, $entityIds);
+//        }
 
         return $this;
     }
@@ -96,6 +98,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
      */
     protected function _updateStoreEntities($storeId)
     {
+        throw new LogicException('Not implemented yet');
         $bulkSize = Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index::COPY_DATA_BULK_SIZE;
         $scrollQuery = array(
             'index' => $this->_mapping->getCurrentIndex()->getCurrentName(),
@@ -153,12 +156,12 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_D
      * This method should be implemetend by descendents
      * and will return the specific data related to this data provider for the given products/store
      *
-     * @param int   $storeId   The store id
+     * @param Smile_ElasticSearch_Model_Scope $scope
      * @param array $entityIds The list of entity Ids
      *
      * @return mixed
      */
-    abstract public function getEntitiesData($storeId, $entityIds);
+    abstract public function getEntitiesData(Smile_ElasticSearch_Model_Scope $scope, $entityIds);
 
     /**
      * This method should be implemetend by descendents

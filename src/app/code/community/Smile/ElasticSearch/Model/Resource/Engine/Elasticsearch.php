@@ -97,7 +97,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
     protected $_client = null;
 
     /**
-     *
+     * @deprecated Index must be passed as parameters to use the one matching the correct scope
      * @var Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      */
     protected $_currentIndex = null;
@@ -114,6 +114,20 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
      * @var array()
      */
     protected $_dateFormats = array();
+
+    /**
+     * Base alias for all indexes
+     *
+     * @var string
+     */
+    protected $_aliasBase;
+
+    /**
+     * Types mappings.
+     *
+     * @var array
+     */
+    protected $_mappings = [];
 
     /**
      * Initializes search engine config and index name.
@@ -135,6 +149,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         if (!isset($config['alias'])) {
             Mage::throwException('Alias must be defined for search engine client.');
         }
+        $this->_aliasBase = $config['alias'];
+
+        $mappingConfig = Mage::getConfig()->getNode(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index::MAPPING_CONF_ROOT_NODE)->asArray();
+        foreach ($mappingConfig as $type => $config) {
+            if ($type === "product") {
+                $this->_mappings[$type] = Mage::getResourceSingleton($config['model']);
+                $this->_mappings[$type]->setType($type);
+            }
+        }
 
         $this->_currentIndex = Mage::getResourceModel('smile_elasticsearch/engine_elasticsearch_index');
         $this->_currentIndex->setAdapter($this)->setCurrentName($config['alias']);
@@ -153,11 +176,58 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
     /**
      * Return the current index instance
      *
+     * @deprecated Use getCurrentIndexesForScope
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      */
     public function getCurrentIndex()
     {
         return $this->_currentIndex;
+    }
+
+    /**
+     * @param array $scopes
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index[]
+     */
+    public function getCurrentIndexesForScopes(array $scopes)
+    {
+        return array_reduce(
+            array_map([$this, 'getCurrentIndexesForScope'], $scopes),
+            'array_merge',
+            []
+        );
+    }
+
+    /**
+     * Return the current index instance for a given scope
+     *
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index[]
+     */
+    public function getCurrentIndexesForScope(Smile_ElasticSearch_Model_Scope $scope)
+    {
+        $indexes = [];
+        foreach ($this->_mappings as $type => $mapping) {
+            /** @var Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index */
+            $index = Mage::getResourceModel('smile_elasticsearch/engine_elasticsearch_index');
+            $indexName = $this->aliasForScopedType($scope, $type);
+            $index
+                ->setAdapter($this)
+                ->setCurrentName($indexName)
+                ->setBaseName($indexName)
+                ->setScope($scope)
+                ->setMapping($mapping);
+            $indexes[] = $index;
+        }
+
+        return $indexes;
+    }
+
+    private function aliasForScopedType(Smile_ElasticSearch_Model_Scope $scope, $type)
+    {
+        return implode('_', [
+            $this->_aliasBase,
+            $scope->getIdentifier(),
+            $type
+        ]);
     }
 
     /**
@@ -190,21 +260,26 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         }
 
         if (is_null($storeId)) {
-            $storeId = Mage::helper('smile_elasticsearch')->getIndexedStoreIds(
-                array_keys(Mage::app()->getStores())
-            );
+             $scopes = Mage::helper('smile_elasticsearch')->getIndexScopes();
         } else if (!is_array($storeId)) {
-            $storeId = array($storeId);
+            $scopes = array(Smile_ElasticSearch_Model_Scope::fromMagentoStoreId($storeId));
+        } else {
+            $scopes = array_map(['Smile_ElasticSearch_Model_Scope', 'fromMagentoStoreId'], $storeId);
         }
+        $indexes = array_filter(
+            $this->getCurrentIndexesForScopes($scopes),
+            function (Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index) use ($type) {
+                return $index->isForType($type);
+            }
+        );
 
         $bulk = array('body' => array());
 
         foreach ($id as $currentId) {
-            foreach ($storeId as $currentStoreId) {
+            foreach ($indexes as $index) {
                 $bulk['body'][] = array(
                     'delete' => array(
-                        '_index' => $this->getCurrentIndex()->getCurrentName(),
-                        '_type'  => $type,
+                        '_index' => $index->getCurrentName(),
                         '_id'    => $currentId
                     )
                 );
@@ -390,28 +465,25 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
     /**
      * Perpare document to be indexed
      *
-     * @param array  $docsData Source document data to be indexed
-     * @param string $type     Document type
-     *
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
+     * @param array $docsData Source document data to be indexed
      * @return array
      */
-    protected function _prepareDocs($docsData, $type)
+    protected function _prepareDocs(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $docsData)
     {
-        if (! is_array($docsData) || empty($docsData)) {
+        if (!is_array($docsData) || empty($docsData)) {
             return array();
         }
 
         $docs = array();
-        foreach ($docsData as $entityId => $index) {
-            $document = $this->getCurrentIndex()->createDocument($index[self::UNIQUE_KEY], $index, $type);
+        foreach ($docsData as $entityId => $data) {
+            $document = $index->createDocument($data[self::UNIQUE_KEY], $data);
             array_push($docs, $document[0]);
             array_push($docs, $document[1]);
         }
 
         return $docs;
     }
-
-
 
     /**
      * Indicates if connection to the search engine is up or not

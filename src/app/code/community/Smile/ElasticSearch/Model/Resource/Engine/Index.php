@@ -43,13 +43,13 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
     /**
      * Adds advanced index data.
      *
-     * @param array $index      Data indexed
-     * @param int   $storeId    Store id to reindex
+     * @param array $index Data indexed
+     * @param Smile_ElasticSearch_Model_Scope $scope
      * @param array $productIds Product ids to reindex
      *
      * @return mixed
      */
-    public function addAdvancedIndex($index, $storeId, $productIds = null)
+    public function addAdvancedIndex($index, Smile_ElasticSearch_Model_Scope $scope, $productIds = null)
     {
         if (is_null($productIds) || !is_array($productIds)) {
             $productIds = array();
@@ -60,9 +60,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Index extends Mage_CatalogSearch
         }
 
         if (count($productIds)) {
-            $categoryData = $this->_getCatalogCategoryData($storeId, $productIds);
+            $categoryData = $this->_getCatalogCategoryData($scope->getStoreId(), $productIds);
             $priceData = $this->_getCatalogProductPriceData(array_keys($categoryData));
-            $ratingData = $this->_getRatingData($storeId, array_keys($priceData));
+            $ratingData = $this->_getRatingData($scope->getStoreId(), array_keys($priceData));
 
             foreach ($index as $productId => &$productData) {
 

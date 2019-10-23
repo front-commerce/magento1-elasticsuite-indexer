@@ -57,21 +57,15 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
      *
      * @return array
      */
-    protected function _getMappingProperties()
+    protected function _getMappingProperties(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index)
     {
-        $mapping = parent::_getMappingProperties(true);
+        $mapping = parent::_getMappingProperties($index);
         $mapping['properties']['in_stock']   = array('type' => 'boolean');
-
-        // TODO simplify this hack when only a single store will be indexed.
-        // see https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/7
-        foreach ($this->_stores as $store) {
-            $languageCode = Mage::helper('smile_elasticsearch')->getLanguageCodeByStore($store);
-        }
 
         $mapping['properties']['category'] = array(
             'type' => 'nested',
             'properties' => array_merge(
-                $this->_getStringMapping('category_name', $languageCode, 'text', true, true, true),
+                $this->_getStringMapping('category_name', $index, 'text', true, true, true),
                 array(
                     'category_id' => array('type' => 'long'),
                     'position' => array('type' => 'long'),
@@ -99,19 +93,14 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     }
 
     /**
-     * Retrive a bucket of indexable entities.
-     *
-     * @param int         $storeId Store id
-     * @param string|null $ids     Ids filter
-     * @param int         $lastId  First id
-     *
-     * @return array
+     * @inheritDoc
      */
-    protected function _getSearchableEntities($storeId, $ids = null, $lastId = 0)
+    protected function _getSearchableEntities(Smile_ElasticSearch_Model_Scope $scope, $ids = null, $lastId = 0)
     {
         $limit = $this->_getBatchIndexingSize();
 
-        $websiteId = Mage::app()->getStore($storeId)->getWebsiteId();
+        $storeId = $scope->getStoreId();
+        $websiteId = $scope->getWebsiteId();
         $adapter   = $this->getConnection();
 
         $select = $adapter->select()
@@ -191,17 +180,12 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     }
 
     /**
-     * Append additional data to the index
-     *
-     * @param array $entityIndexes Indexed data
-     * @param int   $storeId       Store id
-     *
-     * @return array
+     * @inheritDoc
      */
-    protected function _addAdvancedIndex($entityIndexes, $storeId)
+    protected function _addAdvancedIndex($entityIndexes, Smile_ElasticSearch_Model_Scope $scope)
     {
         $index = Mage::getResourceSingleton('smile_elasticsearch/engine_index');
-        $entityIndexes = $index->addAdvancedIndex($entityIndexes, $storeId);
+        $entityIndexes = $index->addAdvancedIndex($entityIndexes, $scope);
         return $entityIndexes;
     }
 
@@ -209,11 +193,10 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
      * Retrieve entities children ids (simple products for configurable, grouped and bundles).
      *
      * @param array $entityIds Parent entities ids.
-     * @param int   $websiteId Current website ids
-     *
+     * @param Smile_ElasticSearch_Model_Scope $scope
      * @return array
      */
-    protected function _getChildrenIds($entityIds, $websiteId)
+    protected function _getChildrenIds($entityIds, Smile_ElasticSearch_Model_Scope $scope)
     {
         $children = array();
         $productTypes = array_keys(Mage::getModel('catalog/product_type')->getOptionArray());
@@ -242,7 +225,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
 
                 Mage::dispatchEvent(
                     'prepare_product_children_id_list_select',
-                    array('select' => $select, 'entity_field' => 'main.product_id', 'website_field' => $websiteId)
+                    array('select' => $select, 'entity_field' => 'main.product_id', 'website_field' => $scope->getWebsiteId())
                 );
 
                 $data = $this->getConnection()->fetchAll($select);
@@ -259,17 +242,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Product
     }
 
     /**
-     * Append children attributes to parents doc.
-     *
-     * @param int    $parentId          Entity id
-     * @param array  &$entityAttributes Attributes values by entity id
-     * @param array  $entityRelations   Array of the entities relations
-     * @param int    $storeId           Store id
-     * @param string $entityTypeId      Type of the parent entity
-     *
-     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Catalog_Eav_Abstract
+     * @inheritDoc
      */
-    protected function _addChildrenData($parentId, &$entityAttributes, $entityRelations, $storeId, $entityTypeId = null)
+    protected function _addChildrenData($parentId, &$entityAttributes, $entityRelations, Smile_ElasticSearch_Model_Scope $scope, $entityTypeId = null)
     {
         $forbiddenAttributesCode = array('visibility', 'status', 'price', 'tax_class_id');
         $attributesById = $this->_getAttributesById();
