@@ -80,13 +80,6 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     protected $_dataProviders = array();
 
     /**
-     * All front stores.
-     *
-     * @var array
-     */
-    protected $_stores = array();
-
-    /**
      * Search helper.
      *
      * @var Smile_ElasticSearch_Helper_Data
@@ -99,7 +92,6 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     public function __construct()
     {
         $this->_helper = Mage::helper('smile_elasticsearch');
-        $this->_stores = $this->_helper->getIndexedStores();
     }
 
     /**
@@ -232,38 +224,31 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
      *
      * @return array
      */
-    protected function _getSpellingFieldMapping()
+    protected function _getSpellingFieldMapping(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index)
     {
         $mapping = array();
-        foreach ($this->_stores as $store) {
-            $languageCode = $this->_helper->getLanguageCodeByStore($store);
-            $defaultAnalyzer = 'analyzer_' . $languageCode;
-            $baseFieldProperties = array('type' => 'text', 'store' => false);
-            foreach (array('search', 'spelling', 'autocomplete') as $currentField) {
-                $currentIndexField = $currentField;
-                $mapping[$currentIndexField] = $baseFieldProperties;
-                $mapping[$currentIndexField]['analyzer'] = $defaultAnalyzer;
-                $mapping[$currentIndexField]['fields'] = array(
-                    'whitespace'       => array_merge(array('analyzer' => 'whitespace'), $baseFieldProperties),
+        $defaultAnalyzer = $index->getLanguageAnalyzerName();
+        $baseFieldProperties = array('type' => 'text', 'store' => false);
+        foreach (array('search', 'spelling', 'autocomplete') as $currentField) {
+            $currentIndexField = $currentField;
+            $mapping[$currentIndexField] = $baseFieldProperties;
+            $mapping[$currentIndexField]['analyzer'] = $defaultAnalyzer;
+            $mapping[$currentIndexField]['fields'] = array(
+                'whitespace' => array_merge(array('analyzer' => 'whitespace'), $baseFieldProperties),
+            );
+
+            if ($currentField == 'autocomplete') {
+                $mapping[$currentIndexField]['fields']['edge_ngram_front'] = array_merge(
+                    array('analyzer' => 'edge_ngram_front'),
+                    $baseFieldProperties
                 );
+            }
 
-                if ($currentField == 'autocomplete') {
-                    $mapping[$currentIndexField]['fields']['edge_ngram_front'] = array_merge(
-                        array('analyzer' => 'edge_ngram_front'), $baseFieldProperties
-                    );
-                }
-
-                if ($currentField == 'search') {
-                    $mapping[$currentIndexField]['fields']['shingle'] = array_merge(
-                        array('analyzer' => 'shingle'), $baseFieldProperties
-                    );
-                }
-
-                if ($this->getCurrentIndex()->isPhoneticSupported($languageCode)) {
-                    $mapping[$currentIndexField]['fields']['phonetic'] = array_merge(
-                        array('analyzer' => 'phonetic_' . $languageCode), $baseFieldProperties
-                    );
-                }
+            if ($index->isPhoneticSupported()) {
+                $mapping[$currentIndexField]['fields']['phonetic'] = array_merge(
+                    array('analyzer' => $index->getPhoneticAnalyzerName()),
+                    $baseFieldProperties
+                );
             }
         }
 
@@ -273,19 +258,19 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     /**
      * Return mapping for an attribute of type varchar
      *
-     * @param string $fieldName    Name of the field
-     * @param string $languageCode Language code we want the mapping for
-     * @param string $type         ES core type (string default)
-     * @param bool   $sortable     Can the attribute be used for sorting
-     * @param bool   $fuzzy        Can the attribute be used in fuzzy searches.
-     * @param bool   $facet        Can the attribute be used as a facet.
-     * @param bool   $autocomplete Can the attribute be used in autocomplete.
-     * @param bool   $searchable   Can the attribute be used in search.
+     * @param string $fieldName Name of the field
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
+     * @param string $type ES core type (string default)
+     * @param bool $sortable Can the attribute be used for sorting
+     * @param bool $fuzzy Can the attribute be used in fuzzy searches.
+     * @param bool $facet Can the attribute be used as a facet.
+     * @param bool $autocomplete Can the attribute be used in autocomplete.
+     * @param bool $searchable Can the attribute be used in search.
      *
      * @return array string
      */
     protected function _getStringMapping(
-        $fieldName, $languageCode, $type = 'text', $sortable = false,
+        $fieldName, Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $type = 'text', $sortable = false,
         $fuzzy = true, $facet = true, $autocomplete = true, $searchable = true
     ) {
         $mapping = array();
@@ -293,7 +278,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
         $analyzers = array('whitespace');
 
         $mapping[$fieldName] = array(
-            'type' => $type, 'analyzer' => 'analyzer_' . $languageCode, 'store' => false,
+            'type' => $type, 'analyzer' => $index->getLanguageAnalyzerName(), 'store' => false,
             'fields' => array()
         );
 
@@ -319,14 +304,14 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
             $mapping[$fieldName]['copy_to'][] = 'spelling';
         }
 
-        if ($this->getCurrentIndex()->isPhoneticSupported($languageCode)) {
+        if ($index->isPhoneticSupported()) {
             $analyzers[] = 'phonetic';
         }
 
         foreach ($analyzers as $analyzer) {
             $analyserOptions = array('type' => $type, 'analyzer' => $analyzer, 'store' => false);
             if ($analyzer == 'phonetic') {
-                $analyserOptions['analyzer'] = $analyzer . '_' . $languageCode;
+                $analyserOptions['analyzer'] = $index->getPhoneticAnalyzerName();
             }
             $mapping[$fieldName]['fields'][$analyzer] = $analyserOptions;
         }
@@ -341,32 +326,32 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     /**
      * Get mapping properties as stored into the index
      *
-     * @param string $useCache Indicates if the cache should be used or if the mapping should be rebuilt.
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
+     * @param bool $useCache Indicates if the cache should be used or if the mapping should be rebuilt.
      *
      * @return array
      */
-    public function getMappingProperties($useCache = true)
+    public function getMappingProperties(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $useCache = true)
     {
-        $indexName = $this->getCurrentIndex()->getCurrentName();
+        $indexName = $index->getCurrentName();
 
         $cacheKey = 'SEARCH_ENGINE_MAPPING_' . $indexName . $this->_type;
 
-        if ($this->_mapping == null && $useCache) {
+        if ($this->_mapping[$cacheKey] == null && $useCache) {
             $mapping = Mage::app()->loadCache($cacheKey);
             if ($mapping) {
-                $this->_mapping = unserialize($mapping);
+                $this->_mapping[$cacheKey] = unserialize($mapping);
             }
         }
 
-        if ($this->_mapping === null) {
+        if ($this->_mapping[$cacheKey] === null) {
 
-            $this->_mapping = $this->_loadMappingFromIndex();
-
-            if ($this->_mapping === null) {
-                $this->_mapping = $this->_getMappingProperties();
+            $this->_mapping[$cacheKey] = $index->loadMappingPropertiesFromIndex($this->_type);
+            if ($this->_mapping[$cacheKey] === null) {
+                $this->_mapping[$cacheKey] = $this->_getMappingProperties($index);
             }
 
-            $mapping = serialize($this->_mapping);
+            $mapping = serialize($this->_mapping[$cacheKey]);
 
             Mage::app()->saveCache(
                 $mapping, $cacheKey, array('CONFIG', 'EAV_ATTRIBUTE'),
@@ -374,7 +359,7 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
             );
         }
 
-        return $this->_mapping;
+        return $this->_mapping[$cacheKey];
     }
 
     /**
@@ -385,16 +370,6 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     protected function _getBatchIndexingSize()
     {
         return max(1, (int) Mage::getStoreConfig('catalog/search/elasticsearch_batch_indexing_size'));
-    }
-
-    /**
-     * Retrive the mapping of the current index.
-     *
-     * @return array|null
-     */
-    protected function _loadMappingFromIndex()
-    {
-        return $this->getCurrentIndex()->loadMappingPropertiesFromIndex($this->_type);
     }
 
     /**
@@ -448,6 +423,8 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     /**
      * Return the current index.
      *
+     * @deprecated Mapping must not have information about index. Please inject additional parameters instead.
+     *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      */
     public function getCurrentIndex()
@@ -459,16 +436,16 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     /**
      * Save docs to the index
      *
-     * @param int   $storeId         Store id
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
      * @param array $entityIndexData Doc values.
      *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Catalog_Eav_Abstract
      */
-    protected function _saveIndexes($storeId, $entityIndexData)
+    protected function _saveIndexes(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $entityIndexData)
     {
         foreach ($this->getDataProviders() as $dataProvider) {
             $entityIds = array_keys($entityIndexData);
-            $externalData = $dataProvider->getEntitiesData($storeId, $entityIds);
+            $externalData = $dataProvider->getEntitiesData($index->getScope(), $entityIds);
             foreach ($entityIndexData as $entityId => &$entityData) {
                 if (isset($externalData[$entityId])) {
                     $entityData += $externalData[$entityId];
@@ -476,16 +453,17 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
             }
         }
 
-        Mage::helper('catalogsearch')->getEngine()->saveEntityIndexes($storeId, $entityIndexData, $this->_type);
+        Mage::helper('catalogsearch')->getEngine()->saveEntityIndexes($index, $entityIndexData);
         return $this;
     }
 
     /**
      * Get mapping properties as stored into the index
      *
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
      * @return array
      */
-    protected function _getMappingProperties()
+    protected function _getMappingProperties(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index)
     {
         $mapping = array(
             '_all' => array('enabled' => false),
@@ -505,11 +483,11 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
     /**
      * Rebuild the index (full or diff).
      *
-     * @param int|null   $storeId Store id the index should be rebuilt for. If null, all store id will be rebuilt.
-     * @param array|null $ids     Ids the index should be rebuilt for. If null, processing a fulll reindex
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index The index to be rebuilt.
+     * @param array|null $ids Ids the index should be rebuilt for. If null, processing a fulll reindex
      *
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
      */
-    abstract public function rebuildIndex($storeId = null, $ids = null);
+    abstract public function rebuildIndex(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $ids = null);
 
 }

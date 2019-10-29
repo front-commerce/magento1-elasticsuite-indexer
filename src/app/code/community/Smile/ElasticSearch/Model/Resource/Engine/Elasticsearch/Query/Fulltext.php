@@ -268,12 +268,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Query_Fulltext
             $defaultSearchField = $this->_getDefaultSearchField();
             $optimizationFunctions = array();
 
-            if (str_word_count($textQuery) > 1) {
-                $qs = array('query' => $textQuery, 'default_field' => $defaultSearchField . '.shingle');
-                $qsFilter = array('query' => array('query_string' => $qs));
-                $optimizationFunctions[] = array('filter' => $qsFilter, 'boost_factor' => $phraseBoostValue);
-            }
-
             if (!in_array($spellingType, array(self::SPELLING_TYPE_PURE_STOPWORDS, self::SPELLING_TYPE_FUZZY))) {
                 $qs = array('query' => $textQuery, 'cutoff_frequency' => $this->_getCutOffFrequency());
                 $qsFilter = array('query' => array('common' => array($defaultSearchField . '.whitespace' => $qs)));
@@ -298,7 +292,6 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Query_Fulltext
         $fuzzySearchFields =  $this->getSearchFields(
             Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract::SEARCH_TYPE_NORMAL, 'whitespace'
         );
-        $fuzzySearchFields[] = $this->_getDefaultSearchField() . '.shingle';
         return $fuzzySearchFields;
     }
     /**

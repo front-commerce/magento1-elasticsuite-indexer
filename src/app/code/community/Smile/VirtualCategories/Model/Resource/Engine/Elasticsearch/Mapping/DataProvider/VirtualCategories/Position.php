@@ -19,17 +19,17 @@ class Smile_VirtualCategories_Model_Resource_Engine_Elasticsearch_Mapping_DataPr
     /**
      * Retrieve custom position for products in virtual categories
      *
-     * @param int   $storeId   The store id
+     * @param Smile_ElasticSearch_Model_Scope $scope
      * @param array $entityIds The entity ids
      *
      * @return array
      */
-    public function getEntitiesData($storeId, $entityIds)
+    public function getEntitiesData(Smile_ElasticSearch_Model_Scope $scope, $entityIds)
     {
         $result = array();
 
         $resourceModel    = Mage::getResourceModel("smile_virtualcategories/catalog_virtualCategory_product_position");
-        $productsPosition = $resourceModel->getByProductIds($entityIds, $storeId);
+        $productsPosition = $resourceModel->getByProductIds($entityIds, $scope->getStoreId());
 
         // Init the field as empty to manage deletion of a previous custom position for products
         foreach ($entityIds as $entityId) {

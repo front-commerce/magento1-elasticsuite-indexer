@@ -35,26 +35,20 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Category
      *
      * @return array
      */
-    protected function _getMappingProperties()
+    protected function _getMappingProperties(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index)
     {
-        $mapping = parent::_getMappingProperties(true);
+        $mapping = parent::_getMappingProperties($index);
         $mapping['properties']['path'] = array('type' => 'keyword');
         return $mapping;
     }
 
     /**
-     * Retrive a bucket of indexable entities.
-     *
-     * @param int         $storeId Store id
-     * @param string|null $ids     Ids filter
-     * @param int         $lastId  First id
-     *
-     * @return array
+     * @inheritDoc
      */
-    protected function _getSearchableEntities($storeId, $ids = null, $lastId = 0)
+    protected function _getSearchableEntities(Smile_ElasticSearch_Model_Scope $scope, $ids = null, $lastId = 0)
     {
         $limit = $this->_getBatchIndexingSize();
-        $rootCategoryId = Mage::app()->getStore($storeId)->getRootCategoryId();
+        $rootCategoryId = Mage::app()->getStore($scope->getStoreId())->getRootCategoryId();
         $rootCategory = Mage::getModel('catalog/category')->load($rootCategoryId);
         $rootPath = $rootCategory->getPath();
 
