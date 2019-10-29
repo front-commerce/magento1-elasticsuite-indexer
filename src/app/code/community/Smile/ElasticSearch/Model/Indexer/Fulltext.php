@@ -150,9 +150,7 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
                 $this->_getIndexer()->resetSearchResults();
             }
         } else if (isset($data['catalogsearch_category_update_product_ids'])) {
-            $productIds = $data['catalogsearch_category_update_product_ids'];
-            $categoryIds = $data['catalogsearch_category_update_category_ids'];
-            $this->_getMapping('category')->rebuildIndex(null, $categoryIds);
+            // Nothing to do yet. To be done as part of https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/11
         }
     }
 
