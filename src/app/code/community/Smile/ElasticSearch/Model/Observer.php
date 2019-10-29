@@ -113,9 +113,11 @@ class Smile_ElasticSearch_Model_Observer
         $category = $observer->getEvent()->getCategory();
         if ($helper->isEnterpriseSupportEnabled() == false) {
             $productIds = $category->getProductCollection()->getAllIds();
+            $indexes = $this->getAllIndexesForType('product');
+            foreach ($indexes as $index) {
+                $index->rebuildIndex($productIds);
+            }
             $this->_getIndexer()->resetSearchResults();
-            $currentIndex = Mage::helper('catalogsearch')->getEngine()->getCurrentIndex();
-            $currentIndex->getMapping('product')->rebuildIndex(null, $productIds);
         } else {
             $category = $observer->getEvent()->getCategory();
             $productIds = $category->getAffectedProductIds();
@@ -139,6 +141,18 @@ class Smile_ElasticSearch_Model_Observer
         }
 
         return $this;
+    }
+
+    /**
+     * @param $type
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index[]
+     */
+    public function getAllIndexesForType($type)
+    {
+        return Mage::helper('catalogsearch')->getEngine()->getCurrentIndexesForScopesAndType(
+            Mage::helper('smile_elasticsearch')->getIndexScopes(),
+            $type
+        );
     }
 
     /**
