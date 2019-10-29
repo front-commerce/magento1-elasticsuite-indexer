@@ -541,6 +541,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      *
      * @param string $id Document Id
      * @param array $data Data indexed
+     * @param string $type Document type
      * @return array Json representation of the bulk document
      */
     public function createDocument($id, array $data = array(), $type = null)
