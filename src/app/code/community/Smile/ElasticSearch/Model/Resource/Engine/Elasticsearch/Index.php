@@ -543,11 +543,11 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
      * @param array $data Data indexed
      * @return array Json representation of the bulk document
      */
-    public function createDocument($id, array $data = array())
+    public function createDocument($id, array $data = array(), $type = null)
     {
         $headerData = array(
             '_index'   => $this->getCurrentName(),
-            '_type'    => $this->getMapping()->getType(),
+            '_type'    => is_null($type) ? $this->getMapping()->getType() : $type,
             '_id'      => $id,
             '_routing' => $id,
         );
@@ -614,7 +614,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
                         );
                     }
 
-                    $this->addDocuments($docs);
+                    $this->executeBulk($docs);
                     $indexDocumentCount = $indexDocumentCount + self::COPY_DATA_BULK_SIZE;
                 }
             }
