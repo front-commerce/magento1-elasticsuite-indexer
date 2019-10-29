@@ -130,11 +130,12 @@ class Smile_ElasticSearch_Model_Observer
         }
 
         if ($helper->isActiveEngine()) {
-            $engine = Mage::helper('catalogsearch')->getEngine();
-            $index = $engine->getCurrentIndex();
-            $mapping = $index->getMapping('category');
-            $engine->cleanIndex(null, $category->getId(), 'category');
-            $mapping->rebuildIndex(null, $category->getId());
+            // TODO implement support when indexing categories. See https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/11
+//            $engine = Mage::helper('catalogsearch')->getEngine();
+//            $index = $engine->getCurrentIndex();
+//            $mapping = $index->getMapping('category');
+//            $engine->cleanIndex(null, $category->getId(), 'category');
+//            $mapping->rebuildIndex(null, $category->getId());
         }
 
         return $this;
@@ -149,12 +150,14 @@ class Smile_ElasticSearch_Model_Observer
      */
     public function cleanCategoryAfterDelete(Varien_Event_Observer $observer)
     {
-        $helper = Mage::helper('smile_elasticsearch');
-        if ($helper->isActiveEngine()) {
-            $category = $observer->getEvent()->getCategory();
-            $engine = Mage::helper('catalogsearch')->getEngine();
-            $engine->cleanIndex(null, $category->getId(), 'category');
-        }
+        // TODO implement support when indexing categories. See https://github.com/front-commerce/magento1-elasticsuite-indexer/issues/11
+
+//        $helper = Mage::helper('smile_elasticsearch');
+//        if ($helper->isActiveEngine()) {
+//            $category = $observer->getEvent()->getCategory();
+//            $engine = Mage::helper('catalogsearch')->getEngine();
+//            $engine->cleanIndex(null, $category->getId(), 'category');
+//        }
     }
 
     /**
