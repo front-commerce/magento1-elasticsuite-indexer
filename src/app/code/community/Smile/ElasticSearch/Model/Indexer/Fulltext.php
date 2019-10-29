@@ -86,10 +86,7 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
             if (!$this->_isProductComposite($productId)) {
                 $parentIds = $this->_getResource()->getRelationsByChild($productId);
                 if (!empty($parentIds)) {
-                    $indexes = $this->getAllIndexesForType('product');
-                    foreach ($indexes as $index) {
-                        $index->rebuildIndex($parentIds);
-                    }
+                    $this->updateProductDataAcrossIndexesFor($parentIds);
                 }
             }
 
@@ -108,12 +105,7 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
                 }
             }
             $this->_getIndexer()->cleanIndex(null, $productIds);
-
-            $indexes = $this->getAllIndexesForType('product');
-            foreach ($indexes as $index) {
-                $index->rebuildIndex($productIds);
-            }
-
+            $this->updateProductDataAcrossIndexesFor($productIds);
             $this->_getIndexer()->resetSearchResults();
 
         } else if (!empty($data['catalogsearch_product_ids'])) {
@@ -128,32 +120,38 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
                 $websiteIds = $data['catalogsearch_website_ids'];
                 $actionType = $data['catalogsearch_action_type'];
 
-                $storeIds = Mage::helper('smile_elasticsearch')->getIndexedStoreIdsFromWebsiteIds($websiteIds);
-                foreach ($storeIds as $storeId) {
-                    if ($actionType == 'remove') {
-                        $this->_getIndexer()
-                            ->cleanIndex($storeId, $productIds)
-                            ->resetSearchResults();
-                    } else if ($actionType == 'add') {
-                        $this->_getMapping('product')->rebuildIndex($storeId, $productIds);
-                        $this->_getIndexer()->resetSearchResults();
+                if ($actionType === 'remove' || $actionType === 'add') {
+                    $indexes = $this->getAllIndexesForType('product');
+                    foreach ($indexes as $index) {
+                        $scope = $index->getScope();
+                        if (in_array($scope->getWebsiteId(), $websiteIds)) {
+                            $indexer = $this->_getIndexer();
+                            if ($actionType == 'remove') {
+                                $indexer->cleanIndex($scope->getStoreId(), $productIds);
+                            } else if ($actionType == 'add') {
+                                $index->rebuildIndex($productIds);
+                            }
+                            $indexer->resetSearchResults();
+                        }
                     }
                 }
             }
+
             if (isset($data['catalogsearch_status'])) {
                 $status = $data['catalogsearch_status'];
                 if ($status == Mage_Catalog_Model_Product_Status::STATUS_ENABLED) {
-                    $this->_getMapping('product')->rebuildIndex(null, $productIds);
+                    $this->updateProductDataAcrossIndexesFor($productIds);
                     $this->_getIndexer()->resetSearchResults();
                 } else {
                     $this->_getIndexer()->cleanIndex(null, $productIds);
-                    $this->_getMapping('product')->rebuildIndex(null, $productIds);
+                    $this->updateProductDataAcrossIndexesFor($productIds);
                     $this->_getIndexer()->resetSearchResults();
                 }
             }
+
             if (isset($data['catalogsearch_force_reindex'])) {
                 $this->_getIndexer()->cleanIndex(null, $productIds);
-                $this->_getMapping('product')->rebuildIndex(null, $productIds);
+                $this->updateProductDataAcrossIndexesFor($productIds);
                 $this->_getIndexer()->resetSearchResults();
             }
         } else if (isset($data['catalogsearch_category_update_product_ids'])) {
@@ -162,27 +160,11 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
     }
 
     /**
-     * Return a mapping used to index entities.
-     *
-     * @param string $type Retrieve mapping for a type (product, category, ...).
-     *
-     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
-     */
-    protected function _getMapping($type)
-    {
-        $index = $this->getCurrentIndex();
-        return $index->getMapping($type);
-    }
-
-    /**
-     * Return the current index where to put new documents.
-     *
-     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
+     * @deprecated one must now use indexes directly (see `getAllIndexes()` for instance)
      */
     public function getCurrentIndex()
     {
-        $engine = Mage::helper('catalogsearch')->getEngine();
-        return $engine->getCurrentIndex();
+        throw new LogicException('Outdated usage of \Smile_ElasticSearch_Model_Indexer_Fulltext::getCurrentIndex(). Please update your code accordingly.');
     }
 
     /**
@@ -221,5 +203,16 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
             Mage::helper('smile_elasticsearch')->getIndexScopes(),
             $type
         );
+    }
+
+    /**
+     * @param array $productIds
+     */
+    private function updateProductDataAcrossIndexesFor(array $productIds)
+    {
+        $indexes = $this->getAllIndexesForType('product');
+        foreach ($indexes as $index) {
+            $index->rebuildIndex($productIds);
+        }
     }
 }
