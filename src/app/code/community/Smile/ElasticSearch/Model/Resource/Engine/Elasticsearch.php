@@ -310,30 +310,43 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
     /**
      * Saves products data in index.
      *
-     * @param int    $storeId Store id
-     * @param array  $indexes Documents data
-     * @param string $type    Documents type
-     *
+     * @param Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index
+     * @param array $indexes Documents data
      * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
+     * @throws Exception
      */
-    public function saveEntityIndexes($storeId, $indexes, $type = 'product')
+    public function saveEntityIndexes(Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index, $indexes)
     {
+        $type = $index->getMapping()->getType();
+
         $object = new Varien_Object();
         $eventDatas = array(
             'type'     => $type,
             'indexes'  => $object->setBulk($indexes),
             'engine'   => $this,
-            'store_id' => $storeId,
+            'store_id' => $index->getScope()->getStoreId(),
+            'scope'    => $index->getScope(),
         );
         Mage::dispatchEvent('search_engine_save_entity_index_before', $eventDatas);
         Mage::dispatchEvent('search_engine_save_'.(string) $type.'_index_before', $eventDatas);
 
-        $docs = $this->_prepareDocs($object->getBulk(), $type);
-        $this->getCurrentIndex()->addDocuments($docs);
+        $docs = $this->_prepareDocs($index, $object->getBulk());
+        $index->executeBulk($docs);
 
         Mage::dispatchEvent('search_engine_save_entity_index_after', $eventDatas);
         Mage::dispatchEvent('search_engine_save_'.(string) $type.'_index_after', $eventDatas);
         return $this;
+    }
+
+    /**
+     * This is part of the Engine interface (see \Mage_CatalogSearch_Model_Resource_Fulltext::_rebuildStoreIndex)
+     * and signature cannot be modified
+     *
+     * @return array
+     */
+    public function getAllowedVisibility()
+    {
+        return Mage::getSingleton('catalog/product_visibility')->getVisibleInSiteIds();
     }
 
     /**
