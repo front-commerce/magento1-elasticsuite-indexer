@@ -221,6 +221,21 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         return $indexes;
     }
 
+    /**
+     * @param array $scopes
+     * @param $type
+     * @return array
+     */
+    public function getCurrentIndexesForScopesAndType(array $scopes, $type)
+    {
+        return array_filter(
+            $this->getCurrentIndexesForScopes($scopes),
+            function (Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index) use ($type) {
+                return $index->isForType($type);
+            }
+        );
+    }
+
     private function aliasForScopedType(Smile_ElasticSearch_Model_Scope $scope, $type)
     {
         return implode('_', [
@@ -245,6 +260,9 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
     /**
      * Cleans index.
      *
+     * This is part of the Engine interface (see \Mage_CatalogSearch_Model_Resource_Fulltext::cleanIndex)
+     * and signature cannot be modified
+     *
      * @param int    $storeId Store ind to be cleaned
      * @param int    $id      Document id to be cleaned
      * @param string $type    Document type to be cleaned
@@ -266,12 +284,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
         } else {
             $scopes = array_map(['Smile_ElasticSearch_Model_Scope', 'fromMagentoStoreId'], $storeId);
         }
-        $indexes = array_filter(
-            $this->getCurrentIndexesForScopes($scopes),
-            function (Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index $index) use ($type) {
-                return $index->isForType($type);
-            }
-        );
+        $indexes = $this->getCurrentIndexesForScopesAndType($scopes, $type);
 
         $bulk = array('body' => array());
 
@@ -280,6 +293,7 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch
                 $bulk['body'][] = array(
                     'delete' => array(
                         '_index' => $index->getCurrentName(),
+                        '_type' => $type, // even though it is redundant since there is only 1 type per index, it seems to be mandatory in ES 6.7
                         '_id'    => $currentId
                     )
                 );

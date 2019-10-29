@@ -66,9 +66,9 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
         return parent::matchEvent($event);
     }
 
-
     /**
      * Process event
+     * Allows to partially update index for atomic changes
      *
      * @param Mage_Index_Model_Event $event Event to be indexed.
      *
@@ -86,7 +86,10 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
             if (!$this->_isProductComposite($productId)) {
                 $parentIds = $this->_getResource()->getRelationsByChild($productId);
                 if (!empty($parentIds)) {
-                    $this->_getMapping('product')->rebuildIndex(null, $parentIds);
+                    $indexes = $this->getAllIndexesForType('product');
+                    foreach ($indexes as $index) {
+                        $index->rebuildIndex($parentIds);
+                    }
                 }
             }
 
@@ -105,7 +108,11 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
                 }
             }
             $this->_getIndexer()->cleanIndex(null, $productIds);
-            $this->_getMapping('product')->rebuildIndex(null, $productIds);
+
+            $indexes = $this->getAllIndexesForType('product');
+            foreach ($indexes as $index) {
+                $index->rebuildIndex($productIds);
+            }
 
             $this->_getIndexer()->resetSearchResults();
 
@@ -201,6 +208,18 @@ class Smile_ElasticSearch_Model_Indexer_Fulltext extends Mage_CatalogSearch_Mode
     {
         return Mage::helper('catalogsearch')->getEngine()->getCurrentIndexesForScopes(
             Mage::helper('smile_elasticsearch')->getIndexScopes()
+        );
+    }
+
+    /**
+     * @param $type
+     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index[]
+     */
+    public function getAllIndexesForType($type)
+    {
+        return Mage::helper('catalogsearch')->getEngine()->getCurrentIndexesForScopesAndType(
+            Mage::helper('smile_elasticsearch')->getIndexScopes(),
+            $type
         );
     }
 }

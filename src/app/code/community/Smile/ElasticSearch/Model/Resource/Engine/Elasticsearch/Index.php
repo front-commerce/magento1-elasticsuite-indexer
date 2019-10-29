@@ -721,11 +721,12 @@ class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Index
     }
 
     /**
-     * @return Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_Abstract
+     * @param null $ids
+     * @return void
      */
-    public function rebuildIndex() // TODO $ids = null
+    public function rebuildIndex($ids = null)
     {
-        $this->getMapping()->rebuildIndex($this);
+        $this->getMapping()->rebuildIndex($this, $ids);
         $this->refresh();
     }
 
