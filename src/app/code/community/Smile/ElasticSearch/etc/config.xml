@@ -101,14 +101,6 @@
                     </smile_elasticsearch>
                 </observers>
             </catalog_category_save_commit_after>
-            <catalog_category_delete_commit_after>
-                <observers>
-                    <smile_elasticsearch>
-                        <class>smile_elasticsearch/observer</class>
-                        <method>cleanCategoryAfterDelete</method>
-                    </smile_elasticsearch>
-                </observers>
-            </catalog_category_delete_commit_after>
             <catalog_category_product_partial_reindex>
                 <observers>
                     <reindex_products>
