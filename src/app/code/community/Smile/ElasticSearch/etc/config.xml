@@ -222,11 +222,6 @@
                             <filter>word_delimiter,lowercase,ascii_folding,trim,synonym</filter>
                             <char_filter>html_strip</char_filter>
                         </whitespace>
-                        <shingle>
-                            <tokenizer>standard</tokenizer>
-                            <filter>word_delimiter,lowercase,ascii_folding,trim,synonym,shingle</filter>
-                            <char_filter>html_strip</char_filter>
-                        </shingle>
                         <edge_ngram_front>
                             <tokenizer>standard</tokenizer>
                             <filter>word_delimiter,ascii_folding,lowercase,trim,edge_ngram_front</filter>
@@ -250,12 +245,6 @@
                             <pattern>\s</pattern>
                             <replacement></replacement>
                         </strip_whitespaces>
-                        <shingle>
-                            <type>shingle</type>
-                            <min_shingle_size>2</min_shingle_size>
-                            <max_shingle_size>2</max_shingle_size>
-                            <output_unigrams>false</output_unigrams>
-                        </shingle>
                         <edge_ngram_front>
                             <type>edgeNGram</type>
                             <min_gram>1</min_gram>

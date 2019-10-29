@@ -244,13 +244,6 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_A
                 );
             }
 
-            if ($currentField == 'search') {
-                $mapping[$currentIndexField]['fields']['shingle'] = array_merge(
-                    array('analyzer' => 'shingle'),
-                    $baseFieldProperties
-                );
-            }
-
             if ($index->isPhoneticSupported()) {
                 $mapping[$currentIndexField]['fields']['phonetic'] = array_merge(
                     array('analyzer' => $index->getPhoneticAnalyzerName()),
