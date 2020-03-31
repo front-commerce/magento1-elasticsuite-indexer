@@ -1,17 +1,21 @@
 {
-    "name": "smile/magento-es",
-    "description": "Magento ElasticSearch Implementation",
-    "homepage": "https://github.com/Smile-SA/smile-magento-elasticsearch",
-    "type": "magento-module",
-    "require": {
-        "elasticsearch/elasticsearch": "~1.2.2"
+  "name": "front-commerce-oss/magento1-elasticsuite-indexer",
+  "description": "Magento ElasticSearch Indexer",
+  "homepage": "https://github.com/front-commerce/magento1-elasticsuite-indexer",
+  "type": "magento-module",
+  "require": {
+    "elasticsearch/elasticsearch": "~1.2.2"
+  },
+  "license": "OSL-3.0",
+  "authors": [
+    {
+      "name": "Front-Commerce",
+      "email": "engineering@front-commerce.com"
     },
-    "license": "OSL-3.0",
-    "authors": [
-        {
-            "name": "Aurélien FOUCRET",
-            "email": "aurelien.foucret@smile.fr"
-        }
-    ],
-    "minimum-stability": "stable"
+    {
+      "name": "Aurélien FOUCRET",
+      "email": "aurelien.foucret@smile.fr"
+    }
+  ],
+  "minimum-stability": "stable"
 }
