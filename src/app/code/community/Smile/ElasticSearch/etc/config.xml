@@ -72,16 +72,6 @@
                         <all>smile_elasticsearch/index_action_fulltext_refresh</all>
                     </action_model>
                 </catalogsearch_fulltext>
-
-                <search_term_product_position>
-                    <model>smile_elasticsearch/indexer_search_terms_position</model>
-                    <action_model>
-                        <changelog>smile_elasticsearch/index_action_search_terms_refresh_changelog</changelog>
-                        <all>smile_elasticsearch/index_action_search_terms_refresh</all>
-                    </action_model>
-                    <index_table>smile_elasticsearch_search_position</index_table>
-                    <sort_order>300</sort_order>
-                </search_term_product_position>
             </indexer>
         </index>
         <events>
@@ -311,10 +301,5 @@
                 <max_size>3</max_size>
             </category_autocomplete>
         </elasticsearch_advanced_search_settings>
-        <index_management>
-            <index_options>
-                <search_terms_products_position>1</search_terms_products_position>
-            </index_options>
-        </index_management>
     </default>
 </config>
