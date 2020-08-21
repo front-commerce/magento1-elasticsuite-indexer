@@ -59,6 +59,6 @@ class Smile_ElasticSearch_Model_Scope
 
     public function getIdentifier()
     {
-        return 'store' . $this->getStoreId();
+        return $this->getStore()->getCode();
     }
 }
