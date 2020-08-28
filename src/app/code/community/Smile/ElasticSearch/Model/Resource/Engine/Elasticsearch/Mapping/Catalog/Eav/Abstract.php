@@ -89,9 +89,27 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
     {
         $mapping = array();
 
+        $_log = function(...$txt) use ($attribute) {
+            return; // TODO remove
+            if ($attribute->getAttributeCode() !== "multiple_test") return;
+            foreach ($txt as $item) {
+                var_dump($item);
+            }
+        };
+
+        $_log('////////');
+
         if ($this->_canIndexAttribute($attribute)) {
             $attributeCode = $attribute->getAttributeCode();
             $type = $this->_getAttributeType($attribute);
+            // if ($this->getBackendType() == 'int' && $this->getFrontendInput() == 'select'
+            $_log([
+                'backendType' => $attribute->getBackendType(),
+                'type' => $type,
+                'usesSource' => $attribute->usesSource(),
+                'sourceModel' => $attribute->getSourceModel(),
+                'frontendInput' => $attribute->getFrontendInput()
+            ]);
 
             $isSearchable = (bool) $attribute->getIsSearchable() && $attribute->getSearchWeight() > 0;
             $isFilterable = $attribute->getIsFilterable() || $attribute->getIsFilterableInSearch();
@@ -100,12 +118,15 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
             $usedForSortBy = (bool) $attribute->getUsedForSortBy();
             $isAutocomplete = (bool) ($attribute->getIsUsedInAutocomplete() || $attribute->getIsDisplayedInAutocomplete());
 
+            $_log($attribute->getBackendModel());
             if ($type === 'text' && !$attribute->getBackendModel() && $attribute->getFrontendInput() != 'media_image') {
                 $fieldName = $attributeCode;
                 $mapping[$fieldName] = array('type' => $type, 'analyzer' => $index->getLanguageAnalyzerName(), 'store' => false);
 
                 $multiTypeField = $attribute->getBackendType() == 'varchar' || $attribute->getBackendType() == 'text';
                 $multiTypeField = $multiTypeField && !($attribute->usesSource());
+
+                $_log('multiple ?', $multiTypeField);
 
                 if ($multiTypeField) {
                     $fieldMapping = $this->_getStringMapping(
@@ -120,16 +141,20 @@ abstract class Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch_Mapping_C
                     'format' => implode('||', array(Varien_Date::DATETIME_INTERNAL_FORMAT, Varien_Date::DATE_INTERNAL_FORMAT))
                 );
             } else {
+                $_log('else', $type);
                 $mapping[$attributeCode] = array(
                     'type' => $type, 'store' => false
                 );
             }
 
             if ($attribute->usesSource()) {
+                $_log('usesSource');
+
                 $fieldName = 'options' . '_' .  $attributeCode;
                 $fieldMapping = $this->_getStringMapping(
                     $fieldName, $index, 'text', $usedForSortBy, $isFuzzy, $isFacet, $isAutocomplete, $isSearchable
                 );
+//                $_log($mapping, $fieldMapping);
                 $mapping = array_merge($mapping, $fieldMapping);
             }
         }
