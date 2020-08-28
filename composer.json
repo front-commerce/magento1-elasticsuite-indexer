@@ -17,5 +17,6 @@
       "email": "aurelien.foucret@smile.fr"
     }
   ],
-  "minimum-stability": "stable"
+  "minimum-stability": "stable",
+  "version": "2.0.0"
 }
