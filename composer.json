@@ -6,7 +6,7 @@
   "require": {
     "elasticsearch/elasticsearch": "~1.2.2"
   },
-  "license": "OSL-3.0",
+  "license": "Apache-2.0",
   "authors": [
     {
       "name": "Front-Commerce",
