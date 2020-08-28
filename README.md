@@ -1,100 +1,75 @@
-About this module :
-===================
-This module provides an integration of ElasticSearch into Magento developed by the R&D to address a lot of shortcomings met with the native SolR integration shipped with Magento EE :
+# Magento 1 ElasticSearch Indexer :
 
-* Relevancy using behavior of the customers
-* Fulltext search improvement (fuzzy text query, …)
-* Rich autocomplete (products, categories,  …)
-* Highly tunable scoring features
-* Integration of all Smile experience about search solutions (e.g. : smart categories, …)
+This module is a fork from [ElasticSuite for Magento 1](https://github.com/Smile-SA/smile-magento-elasticsearch) aimed at providing an ElasticSearch indexing for Magento 1 that is compatible with the latest [ElasticSuite for Magento 2](https://github.com/Smile-SA/elasticsuite) schema.\
+We recommend that you use [OpenMage LTS](https://www.openmage.org/) for a version of Magento 1 that is still supported.
 
-Documentation :
-===============
+**DISCLAIMER: we don't plan to support querying the index from Magento 1's frontend. However, if you'd like to take ownership of this aspect we would be glad to add you as a maintainer. Please [contact us](engineering@front-commerce.com).**
 
-* [Installing the module](doc/install.md)
-* [User documentation](doc/user-documentation.md) (PDF version : [User documentation](doc/User Guide-Magento Elastic Suite for Magento 1.pdf))
-* [Developper documentation](doc/developper-documentation.md)
-* [Behavorial search documentation](doc/behavorial-search.md)
-* [Indexing custom content](doc/indexing.md)
+_Status: This module is used in production by some [Front-Commerce / Magento 1](https://www.front-commerce.com/en/) projects_
 
-FAQ
-===
+## Installation
 
-Why choosing ElasticSearch instead of extending the SolR implementation shipped with Magento EE ?
-------------------------------------------------------------------------------------------------
-First, ElasticSearch contains a lot more features usefull we need to achieve some features of the project :
+You can install the module using **composer**, **modman** or by copying manually the content of the `src/` directory in your Magento installation.
 
-* Query language is more complete and allow us toi build very complex use case models
-* Rescoring used for behavorial content
-* Ability to store many types of content into the same index (products, categories, ...)
+When installed, you can login in the admin panel to configure it.
 
-Into the future we plan to use even more features specific to ElasticSearch (percolation, aggregation), since they are very valuable into an eCommerce context.
+## Configuration
 
-In the end ES has a lot of advantages over SolR :
+The module can be configured from the **System > Configuration > Catalog > Catalog Search** page and section. You first need to make sure that the Search Engine param is set to Smile Serchandizing Suite.
 
-* A strong momentum with a community providing a lot of support and extensions to the core offer
-* Supported by a commercial company
-* Very well documented (http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/) !!!
-* Built for distributed environnement, making easier to scale it up for our biggest clients
-* Built with replication features out of the box ensuring more security for the websites using the engine
+Configure the ElasticSearch server and port, and save the settings.
 
+You should then **reindex** your store, by running: `php shell/indexer.php reindexall` (or `n98 index:reindex:all`).
 
-Who is supporting the module ? What about upgrability ?
--------------------------------------------------------
+> **TIPS:** in case of issues, take a look at the **Troubleshooting** section below.
 
-Smile is supporting the module and ensure it is compatible with new Magento versions.
-The kind of feature we provide requires usually an external tool (FredHopper, ...) which requires a project by project upgrade which can take longer.
+## Troubleshooting
 
-Our main idea is to create a community of clients sharing investment and evolutions about searchandizing features.
- 
-Will the module be OpenSourced ?
---------------------------------
+Here is an overview of the most common errors and solutions for them.
 
-It is planned. A code audit is still necessary to achieve this goal.
+### `FORBIDDEN/12/index read-only / allow delete (api)` error
 
+This error could appear during a reindexation. There are 2 possible causes.
 
-What is the project roadmap ?
------------------------------
+#### The index is in read-only mode
 
-* More user behavior influence
-* Promotional rules influence on the search engine, Search engine based distance to promotion.
-* More website animation features to achieve a full searchandising suite (
-  * Showcases based on widgets
-  * Banners selection
-  * Stamping based on rules (new product, special price, ...)
-  * Marketing facets
-* Recommandations
+For some reasons, your index could be in read-only mode. In this case, you should reconfigure the index [as detailed here](https://discuss.elastic.co/t/forbidden-12-index-read-only-allow-delete-api/110282/5):
 
+```shell
+curl -XPUT "http://localhost:9200/_settings" -H'Content-Type: application/json' -d'
+{
+  "index": {
+    "blocks": {
+      "read_only_allow_delete": "false"
+    }
+  }
+}'
+```
 
-What Magento version is supported ?
------------------------------------
+#### Not enough remaining space on disk
 
-The module has been successfully deployed and tested against the following Magento versions :
-* Magento EE 1.13
-* Magento EE 1.14
-* Magento CE 1.8
-* Magento CE 1.9
+Another reason could be that your hard drive has not enough space left on the device (~ <10 Go). The solution is… to make some space on it!
 
+Try to empty your trash, remove unused docker images (`docker image prune -a`) or other things like that! Note: [`ncdu`](https://dev.yorhel.nl/ncdu) is your friend.
 
-Can I install it on my existing project ?
------------------------------------------
+### `Fatal error: Uncaught Error: Call to undefined method Mage_CatalogSearch_Model_Resource_Fulltext_Engine::getCurrentIndexesForScopes()`
 
-If your project is using Magento EE >= 1.13 or Magento CE >= 1.8, the time you will need will depends only of the amount of custom developments you spent on SolR onto the project. The custom developments can be separated in two parts :
+There is a known unclear error message, that looks like the error below:
 
-* Custom development replaced by new features of Magento ElasticSearch module (multiple facets, virtual categories, ...). You should disable this features into your old project and adapt the new version to you specific needs
-* Other features, you should be able to port with a very moderated effort (1 day / feature).
+```
+Fatal error: Uncaught Error: Call to undefined method Mage_CatalogSearch_Model_Resource_Fulltext_Engine::getCurrentIndexesForScopes() in /var/www/.modman/magento1-elasticsuite-indexer/src/app/code/community/Smile/ElasticSearch/Model/Indexer/Fulltext.php:189
+Stack trace:
+#0 /var/www/.modman/magento1-elasticsuite-indexer/src/app/code/community/Smile/ElasticSearch/Model/Indexer/Fulltext.php(175): Smile_ElasticSearch_Model_Indexer_Fulltext->getAllIndexes()
+#1 /var/www/htdocs/app/code/core/Mage/Index/Model/Process.php(212): Smile_ElasticSearch_Model_Indexer_Fulltext->reindexAll()
+#2 /var/www/htdocs/app/code/core/Mage/Index/Model/Process.php(260): Mage_Index_Model_Process->reindexAll()
+#3 phar:///usr/local/bin/n98/src/N98/Magento/Command/Indexer/AbstractIndexerCommand.php(218): Mage_Index_Model_Process->reindexEverything()
+#4 phar:///usr/local/bin/n98/src/N98/Magento/Command/Indexer/AbstractIndexerCommand.php(187): N98\Magento\Command\Indexer\AbstractIndexerCommand->executeProcess(Object(Symfony\Component\Console\Output\Console in /var/www/.modman/magento1-elasticsuite-indexer/src/app/code/community/Smile/ElasticSearch/Model/Indexer/Fulltext.php on line 189
+```
 
-If your project does not rely on SolR to achieve developments, the migration project should not be more than a few days project.
+The error is triggered when **your ElasticSearch configuration is incorrect**. The solution is to double-check your settings in admin. If the problem persists, please contact us.
 
-For older version of Magento, an evaluation should be done for your specific project.
+> **Note:** the error is because in such situation `\Smile_ElasticSearch_Model_Resource_Engine_Elasticsearch::getStatus()` returns `false` and our code doesn't handle this gracefully yet. We should throw an exception with a clearer message for developers. Hopefully in an upcoming version! Feel free to send us a PR for this.
 
+## License
 
-Bugs / RFC
-----------
-
-Don't hesitate to :
-
-* Submit a bug, RFC, idea of new feature into [the issue tracker of the project](research-and-development/magento-es/issues)
-* Submit a merge request
-
-
+[Apache-2.0](./LICENSE)
